@@ -1,0 +1,44 @@
+# ─── Environment Variables ───────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.development
+
+# ─── Frontend ────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# ─── Backend ─────────────────────────────────────────────────────────
+backend/target/
+backend/.mvn/
+backend/*.class
+backend/*.jar
+backend/hs_err_pid*
+
+# ─── IDE ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# ─── OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Docker ──────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Logs ────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Firebase ────────────────────────────────────────────────────────
+*firebase-adminsdk*.json
+serviceAccountKey.json
