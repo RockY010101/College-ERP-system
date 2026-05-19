@@ -24,10 +24,37 @@
 
     <!-- ── Properties ────────────────────────────────────────────── -->
     <properties>
-        <java.version>17</java.version>
-        <firebase.version>9.2.0</firebase.version>
+        <java.version>21</java.version>
+        <firebase.version>9.3.0</firebase.version>
         <cloudinary.version>1.36.0</cloudinary.version>
+        <guava.version>33.2.1-jre</guava.version>
+        <!-- Override Spring Boot BOM Lombok — JDK 26 requires Lombok 1.18.46+ -->
+        <lombok.version>1.18.46</lombok.version>
     </properties>
+
+    <!-- ── Dependency Management ─────────────────────────────────── -->
+    <!--
+        Pin Guava to 32.1.3-jre so the Firebase Admin SDK can resolve
+        com.google.common.base.Supplier. Spring Boot's BOM does not
+        manage Guava, so without this block Maven may resolve an
+        incompatible version from transitive dependencies.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- Guava: pinned to resolve Firebase Admin SDK transitive dep -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            <!-- Lombok: override Spring Boot BOM version for JDK 26 compatibility -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <!-- ── Dependencies ──────────────────────────────────────────── -->
     <dependencies>
@@ -63,17 +90,28 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Firebase Admin SDK -->
+        <!-- Firebase Admin SDK
+        9.3.0 reduces transitive dependency conflicts vs 9.2.0.
+        Guava is declared explicitly below so the version is stable. -->
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
             <version>${firebase.version}</version>
         </dependency>
 
-        <!-- Cloudinary -->
+        <!-- Guava — explicit declaration required because Spring Boot BOM
+        does not manage it, but Firebase Admin SDK and google-auth
+        libraries require com.google.common.base.Supplier (Guava 32+). -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
+
+        <!-- Cloudinary (http45 = Apache HttpClient 4.5, compatible with Spring Boot 3) -->
         <dependency>
             <groupId>com.cloudinary</groupId>
-            <artifactId>cloudinary-http44</artifactId>
+            <artifactId>cloudinary-http45</artifactId>
             <version>${cloudinary.version}</version>
         </dependency>
 
@@ -109,6 +147,22 @@
     <!-- ── Build ──────────────────────────────────────────────────── -->
     <build>
         <plugins>
+            <!-- Lombok annotation processor — required for @RequiredArgsConstructor
+            and other Lombok annotations to work correctly on all JDK versions -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
