@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { RoleProvider } from './context/RoleContext'
 import AppRoutes from './routes/AppRoutes'
 import './App.css'
+import './components/TopBar.css'
 
 /**
  * App — Root application component.

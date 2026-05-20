@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════
 // ProtectedRoutes — College ERP Frontend
 // Guards routes based on authentication and role.
+// Supports both Firebase auth and demo/mock auth.
 // ══════════════════════════════════════════════════════════════════════
 
 import React from 'react'
@@ -21,7 +22,20 @@ function ProtectedRoute({ allowedRoles = [], children }) {
 
   // Wait for auth state to resolve
   if (loading) {
-    return <div className="app-loading">Loading...</div>
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        fontFamily: 'var(--font-sans)',
+        color: 'var(--color-text-muted)',
+        gap: '0.5rem',
+      }}>
+        <span className="material-symbols-rounded" style={{ fontSize: '20px' }}>hourglass_empty</span>
+        Loading…
+      </div>
+    )
   }
 
   // Redirect unauthenticated users to login
@@ -29,9 +43,17 @@ function ProtectedRoute({ allowedRoles = [], children }) {
     return <Navigate to="/login" replace />
   }
 
+  // For demo users, the role is stored on the user object itself
+  if (currentUser.isDemo && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(currentUser.role)) {
+      return <Navigate to="/login" replace />
+    }
+    return children
+  }
+
   // Redirect authenticated users without required role
   if (allowedRoles.length > 0 && !hasRole(allowedRoles)) {
-    return <Navigate to="/unauthorized" replace />
+    return <Navigate to="/login" replace />
   }
 
   return children
