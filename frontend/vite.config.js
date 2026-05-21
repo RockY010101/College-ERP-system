@@ -7,7 +7,7 @@ export default defineConfig({
   // Allow .js files to contain JSX (context providers, route guards use .js extension)
   esbuild: {
     loader: 'jsx',
-    include: /src\/.*\.jsx?$/,
+    include: /src\/.*\.js$/,
   },
   optimizeDeps: {
     esbuildOptions: {
