@@ -239,7 +239,6 @@ jobs:
 
       - name: Deploy to Vercel (Production)
         id: deploy
-        working-directory: ./frontend
         run: |
           DEPLOY_URL=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
