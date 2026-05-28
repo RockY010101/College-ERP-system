@@ -2,7 +2,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 
 const stats = [
   { id: 'total-users', icon: 'group', label: 'Total Users', value: '1,456', delta: '+62 this month', variant: 'primary' },
-  { id: 'system-uptime', icon: 'uptime', label: 'System Uptime', value: '99.7%', delta: '30-day average', variant: 'success' },
+  { id: 'system-uptime', icon: 'timer', label: 'System Uptime', value: '99.7%', delta: '30-day average', variant: 'success' },
   { id: 'active-sessions', icon: 'devices', label: 'Active Sessions', value: '342', delta: '↑ 18% from yesterday', variant: 'secondary' },
   { id: 'pending-approvals', icon: 'pending_actions', label: 'Pending Approvals', value: '12', delta: '3 urgent', variant: 'error' },
 ];
