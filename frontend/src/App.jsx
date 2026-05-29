@@ -4,6 +4,7 @@ import { RoleProvider } from './context/RoleContext'
 import AppRoutes from './routes/AppRoutes'
 import './App.css'
 import './components/TopBar.css'
+import './components/ModulePages.css'
 
 /**
  * App — Root application component.

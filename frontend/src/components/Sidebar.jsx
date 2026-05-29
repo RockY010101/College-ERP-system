@@ -4,6 +4,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import React from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useRole } from '../context/RoleContext'
 import './Sidebar.css'
@@ -50,10 +51,10 @@ const NAV_ITEMS = {
 function Sidebar() {
   const { currentUser, logout } = useAuth()
   const { role } = useRole()
+  const location = useLocation()
 
   const items = NAV_ITEMS[role] || NAV_ITEMS.STUDENT
   const displayName = currentUser?.displayName || currentUser?.email || 'User'
-  const currentPath = window.location.pathname
 
   return (
     <aside className="sidebar" id="main-sidebar">
@@ -70,16 +71,25 @@ function Sidebar() {
 
       {/* ── Navigation ── */}
       <nav className="sidebar__nav">
-        {items.map((item) => (
-          <a
-            key={item.path}
-            href={item.path}
-            className={`sidebar__link ${currentPath === item.path ? 'sidebar__link--active' : ''}`}
-          >
-            <span className="material-symbols-rounded">{item.icon}</span>
-            <span>{item.label}</span>
-          </a>
-        ))}
+        {items.map((item) => {
+          // Dashboard links should only be active on exact match
+          const isDashboard = item.label === 'Dashboard'
+          const isActive = isDashboard
+            ? location.pathname === item.path
+            : location.pathname.startsWith(item.path)
+
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={`sidebar__link ${isActive ? 'sidebar__link--active' : ''}`}
+              end={isDashboard}
+            >
+              <span className="material-symbols-rounded">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* ── User Footer ── */}
