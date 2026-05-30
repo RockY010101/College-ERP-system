@@ -280,6 +280,80 @@
   grid-column: 1 / -1;
 }
 
+/* ── Pending Approval Banner ── */
+.login__pending {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+  border: 1px solid #ffe0b2;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-5);
+  position: relative;
+  animation: login__pending-enter 0.35s ease-out;
+}
+
+@keyframes login__pending-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login__pending-icon {
+  font-size: 24px;
+  color: #e65100;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.login__pending-content {
+  flex: 1;
+}
+
+.login__pending-content strong {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #bf360c;
+  margin-bottom: var(--space-1);
+}
+
+.login__pending-content p {
+  font-size: 0.8125rem;
+  color: #6d4c00;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.login__pending-dismiss {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-base);
+  color: #bf360c;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.login__pending-dismiss:hover {
+  opacity: 1;
+  background: rgba(191, 54, 12, 0.08);
+}
+
+.login__pending-dismiss .material-symbols-rounded {
+  font-size: 18px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .login {

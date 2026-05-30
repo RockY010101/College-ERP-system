@@ -1,9 +1,10 @@
 // ══════════════════════════════════════════════════════════════════════
 // LoginPage.jsx — Academic Trust Redesign
-// Split-screen login with Firebase auth + Demo Mode quick-select
+// Split-screen login with Firebase auth + Firestore role lookup
+// Flow: Authenticate → Fetch role → Redirect to dashboard (or pending)
 // ══════════════════════════════════════════════════════════════════════
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useRole } from '../../context/RoleContext'
@@ -30,25 +31,60 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { demoLogin, isFirebaseConfigured } = useAuth()
-  const { setRole } = useRole()
+  const [pendingApproval, setPendingApproval] = useState(false)
+  const { currentUser, demoLogin, isFirebaseConfigured, logout } = useAuth()
+  const { role, setRole } = useRole()
   const navigate = useNavigate()
 
+  // ── Auto-redirect if already authenticated with a resolved role ──
+  // Handles: page refresh, back-navigation to /login while logged in
+  useEffect(() => {
+    if (currentUser && role && ROLE_ROUTES[role]) {
+      navigate(ROLE_ROUTES[role], { replace: true })
+    }
+  }, [currentUser, role, navigate])
+
+  // ── Firebase Login ──────────────────────────────────────────────────
   const handleFirebaseLogin = async (e) => {
     e.preventDefault()
     setError('')
+    setPendingApproval(false)
     setLoading(true)
+
     try {
+      // Step 1: Authenticate with Firebase
       const { login } = await import('../../services/authService')
-      await login(email, password)
-      // Auth state change will redirect via ProtectedRoute
+      const credential = await login(email, password)
+
+      // Step 2: Fetch role from Firestore
+      const { getUserRole } = await import('../../services/firestoreService')
+      const userRole = await getUserRole(credential.user.uid)
+
+      if (userRole && ROLE_ROUTES[userRole]) {
+        // Step 3a: Role found → set context + redirect to dashboard
+        setRole(userRole)
+        navigate(ROLE_ROUTES[userRole], { replace: true })
+      } else {
+        // Step 3b: No role assigned → sign out + show pending message
+        await logout()
+        setPendingApproval(true)
+      }
     } catch (err) {
-      setError('Invalid email or password. Please try again.')
+      // Firebase auth errors
+      const code = err?.code || ''
+      if (code.includes('invalid-credential') || code.includes('user-not-found') || code.includes('wrong-password')) {
+        setError('Invalid email or password. Please try again.')
+      } else if (code.includes('too-many-requests')) {
+        setError('Too many failed attempts. Please try again later.')
+      } else {
+        setError('Unable to sign in. Please check your connection and try again.')
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  // ── Demo Login (unchanged) ─────────────────────────────────────────
   const handleDemoLogin = (roleKey, name) => {
     demoLogin(roleKey, name)
     setRole(roleKey)
@@ -94,6 +130,24 @@ function LoginPage() {
             <h2>Sign In</h2>
             <p>Enter your credentials to access the platform</p>
           </div>
+
+          {/* ── Pending Approval Banner ── */}
+          {pendingApproval && (
+            <div className="login__pending" role="status" id="pending-approval-banner">
+              <span className="material-symbols-rounded login__pending-icon">hourglass_top</span>
+              <div className="login__pending-content">
+                <strong>Account Pending Approval</strong>
+                <p>Your account exists but no role has been assigned yet. Please contact your institution administrator to get access.</p>
+              </div>
+              <button
+                className="login__pending-dismiss"
+                onClick={() => setPendingApproval(false)}
+                aria-label="Dismiss"
+              >
+                <span className="material-symbols-rounded">close</span>
+              </button>
+            </div>
+          )}
 
           {/* Firebase Login Form */}
           {isFirebaseConfigured && (

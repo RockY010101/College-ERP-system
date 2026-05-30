@@ -18,10 +18,10 @@ import { useRole } from '../context/RoleContext'
  */
 function ProtectedRoute({ allowedRoles = [], children }) {
   const { currentUser, loading } = useAuth()
-  const { hasRole } = useRole()
+  const { hasRole, roleLoading } = useRole()
 
-  // Wait for auth state to resolve
-  if (loading) {
+  // Wait for auth state and role resolution to complete
+  if (loading || roleLoading) {
     return (
       <div style={{
         display: 'flex',
