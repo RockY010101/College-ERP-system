@@ -32,6 +32,7 @@ function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingApproval, setPendingApproval] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { currentUser, demoLogin, isFirebaseConfigured, logout } = useAuth()
   const { role, setRole } = useRole()
   const navigate = useNavigate()
@@ -174,15 +175,32 @@ function LoginPage() {
 
               <div className="login__field">
                 <label htmlFor="login-password">Password</label>
-                <input
-                  id="login-password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
+                <div className="login__password-wrapper">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="login__password-toggle"
+                    onMouseDown={() => setShowPassword(true)}
+                    onMouseUp={() => setShowPassword(false)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    onTouchStart={() => setShowPassword(true)}
+                    onTouchEnd={() => setShowPassword(false)}
+                    aria-label="Hold to show password"
+                    tabIndex={-1}
+                  >
+                    <span className="material-symbols-rounded">
+                      {showPassword ? 'visibility' : 'visibility_off'}
+                    </span>
+                  </button>
+                </div>
               </div>
 
               <div className="login__actions">

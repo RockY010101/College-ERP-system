@@ -154,6 +154,51 @@
   flex-direction: column;
 }
 
+/* ── Password Field with Eye Toggle ── */
+.login__password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login__password-wrapper input {
+  flex: 1;
+  padding-right: 44px;
+}
+
+.login__password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-base);
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.login__password-toggle:hover {
+  opacity: 0.8;
+}
+
+.login__password-toggle:active {
+  opacity: 1;
+  color: var(--color-primary);
+}
+
+.login__password-toggle .material-symbols-rounded {
+  font-size: 20px;
+}
+
 .login__error {
   display: flex;
   align-items: center;
