@@ -20,17 +20,21 @@ import { db } from '../firebase/firebaseConfig'
  */
 export const getUserByUid = async (uid) => {
   try {
+    console.log('[DEBUG] Fetching Firestore doc: users/' + uid)
     const userDocRef = doc(db, 'users', uid)
     const userSnap = await getDoc(userDocRef)
 
     if (userSnap.exists()) {
-      return userSnap.data()
+      const data = userSnap.data()
+      console.log('[DEBUG] Firestore doc found:', data)
+      return data
     }
 
     // No document — user exists in Firebase Auth but has no role assigned
+    console.warn('[DEBUG] No Firestore doc found for UID:', uid)
     return null
   } catch (error) {
-    console.error('Firestore: Failed to fetch user role:', error)
+    console.error('[DEBUG] Firestore ERROR:', error.code, error.message)
     return null
   }
 }
