@@ -1,33 +1,32 @@
-# College ERP Management System
+# 🎓 College ERP Management System
 
 A modern full-stack College ERP platform built to simulate real-world enterprise deployment architecture with cloud infrastructure, CI/CD automation, role-based access control, and scalable backend services.
 
-> This project is currently under active development. Features, UI, authentication flows, and infrastructure are being continuously improved.
+This project is currently under active development, with core infrastructure, deployment pipelines, authentication services, and multi-role dashboards already implemented.
 
 ---
 
-## 🚀 Project Overview
+# 🚀 Project Overview
 
-The College ERP Management System is designed to centralize academic, administrative, and operational workflows inside a single platform.
+The College ERP Management System is designed to centralize academic, administrative, and operational workflows within a single platform.
 
-The system includes dedicated portals for:
+The system provides dedicated portals for:
 
-* Students
+* Student
 * Faculty
-* Administrators
-* Super Admins
-* Accountants
+* Administrator
+* Super Admin
+* Accountant
 
 This project focuses heavily on:
 
-* Full-stack architecture
-* DevOps workflows
-* CI/CD automation
-* Cloud deployment
+* Full-Stack Development
+* Cloud Infrastructure
+* DevOps Workflows
+* CI/CD Automation
 * Containerization
-* Enterprise-style infrastructure
-
-Because apparently building only CRUD apps wasn't painful enough.
+* Enterprise Application Architecture
+* Role-Based Access Control (RBAC)
 
 ---
 
@@ -37,9 +36,10 @@ Because apparently building only CRUD apps wasn't painful enough.
 
 * React.js
 * Vite
-* Tailwind CSS
+* React Router
+* CSS
 * Firebase Authentication
-* Vercel Deployment
+* Vercel
 
 ## Backend
 
@@ -47,20 +47,22 @@ Because apparently building only CRUD apps wasn't painful enough.
 * Java
 * REST APIs
 * JWT Authentication
-* Role-Based Access Control (RBAC)
+* Role-Based Authorization
 
 ## Database
 
 * PostgreSQL
 * AWS RDS
 
-## DevOps & Cloud
+## Cloud & DevOps
 
-* Docker
 * AWS EC2
-* GitHub Actions CI/CD
+* AWS RDS
+* Docker
+* Docker Compose
+* GitHub Actions
 * Vercel
-* Nginx (planned)
+* Firebase
 
 ---
 
@@ -69,120 +71,203 @@ Because apparently building only CRUD apps wasn't painful enough.
 ## Authentication
 
 * Firebase Email/Password Authentication
-* Role-based login system
-* Demo login access
-* JWT validation flow
+* Multi-role login system
+* Demo role access
+* Protected routes
+* JWT validation architecture
 
-## Dashboards
+## Student Portal
 
-* Student dashboard
-* Faculty dashboard
-* Admin dashboard
-* Super Admin dashboard
+* Academic dashboard
+* Attendance overview
+* Results dashboard
+* Fee tracking
+* Notifications
+
+## Faculty Portal
+
+* Student management
+* Attendance dashboard
+* Results management
+* Subject overview
+
+## Administrator Portal
+
+* Student administration
+* Employee management
+* Course administration
+* Institutional reports
+
+## Super Admin Portal
+
+* User management
+* Department monitoring
+* System overview dashboard
+* Platform administration
 
 ## Cloud Infrastructure
 
 * Frontend deployed on Vercel
-* Backend containerized using Docker
 * Backend deployed on AWS EC2
 * PostgreSQL hosted on AWS RDS
-
-## CI/CD Pipeline
-
-Automated deployment pipeline using GitHub Actions:
-
-1. Backend Build & Test
-2. Frontend Build Validation
-3. Docker Image Build & Push
-4. AWS EC2 Auto Deployment
-5. Vercel Frontend Deployment
+* Firebase Authentication configured
+* CI/CD deployment pipeline operational
 
 ---
 
 # 🧱 System Architecture
 
 ```text
-Frontend (React + Vercel)
-        ↓
-REST API Calls
-        ↓
-Backend (Spring Boot + Docker on EC2)
-        ↓
+React Frontend (Vercel)
+          │
+          ▼
+Spring Boot REST APIs (AWS EC2)
+          │
+          ▼
 PostgreSQL Database (AWS RDS)
-        ↓
-Firebase Authentication + JWT Validation
+
+Firebase Authentication
+          │
+          ▼
+Role-Based Authorization
 ```
 
 ---
 
-# 📦 DevOps Workflow
+# 📦 CI/CD Pipeline
+
+Automated deployment workflow using GitHub Actions.
 
 ```text
 Git Push
    ↓
 GitHub Actions
    ↓
-Build & Test
+Frontend Build Validation
    ↓
-Dockerize Backend
+Backend Build & Test
    ↓
-Push Deployment
+Docker Build
    ↓
-AWS EC2 Auto Deploy
+Deployment Pipeline
    ↓
-Frontend Auto Deploy on Vercel
+AWS EC2 Backend Deployment
+   ↓
+Vercel Frontend Deployment
+```
+
+### Pipeline Features
+
+* Automated build validation
+* Environment secret management
+* Continuous deployment workflow
+* Dockerized backend services
+* Cloud deployment automation
+
+---
+
+# ☁️ Deployment Status
+
+| Service                            | Status         |
+| ---------------------------------- | -------------- |
+| Frontend Deployment                | ✅ Active       |
+| Vercel Production Environment      | ✅ Active       |
+| Spring Boot Backend Deployment     | ✅ Active       |
+| CI/CD Pipeline                     | ✅ Working      |
+| Docker Configuration               | ✅ Active       |
+| AWS RDS PostgreSQL                 | ✅ Provisioned  |
+| Firebase Authentication            | ✅ Configured   |
+| Frontend ↔ Backend API Integration | 🚧 In Progress |
+| Production Security Hardening      | 🚧 In Progress |
+
+---
+
+# 📂 Project Structure
+
+```text
+college-erp/
+│
+├── frontend/
+│   ├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── routes/
+│   ├── services/
+│   └── firebase/
+│
+├── backend/
+│
+├── .github/
+│   └── workflows/
+│
+├── docker-compose.yml
+├── vercel.json
+└── README.md
 ```
 
 ---
 
 # 📌 Planned Features
 
-* Complete Firebase role mapping
+* Complete API integration
+* Dynamic database persistence
 * Attendance management
 * Fee management
 * Report generation
 * Student analytics
 * File uploads
 * Real-time notifications
-* Admin controls
+* Advanced administration controls
 * Mobile responsiveness improvements
+* Monitoring & observability
 * Production-grade security hardening
 
 ---
 
-# ☁️ Deployment Status
+# 🎯 Learning Outcomes
 
-| Service                       | Status         |
-| ----------------------------- | -------------- |
-| Frontend Deployment           | ✅ Active       |
-| Backend Deployment            | ✅ Active       |
-| Dockerized Backend            | ✅ Active       |
-| CI/CD Pipeline                | ✅ Working      |
-| AWS RDS                       | ✅ Connected    |
-| Firebase Auth                 | 🚧 In Progress |
-| Production Security Hardening | 🚧 In Progress |
+This project demonstrates practical experience with:
+
+* Full-Stack Application Development
+* AWS Cloud Infrastructure
+* AWS RDS PostgreSQL Configuration
+* AWS EC2 Deployment
+* Docker Containerization
+* Firebase Authentication
+* CI/CD Pipeline Design
+* GitHub Actions Automation
+* Role-Based Access Control
+* Enterprise System Architecture
+* Frontend Deployment using Vercel
 
 ---
 
 # 📷 Screenshots
 
-> Screenshots and architecture diagrams will be added in future updates.
+### Login Portal
+
+* Firebase Authentication
+* Multi-role access
+
+### Student Dashboard
+
+* Academic performance
+* Attendance tracking
+* Fee overview
+
+### Faculty Dashboard
+
+* Student monitoring
+* Attendance management
+
+### Administrator Dashboard
+
+* Course and student administration
+
+### Super Admin Dashboard
+
+* Institution-wide monitoring
 
 ---
 
-# 🎯 Project Goal
-
-This project was built to explore:
-
-* Enterprise deployment workflows
-* Full-stack system architecture
-* Cloud-native deployment
-* CI/CD automation
-* DevOps practices
-* Scalable application infrastructure
-
-And also to willingly enter the psychological warfare arena known as AWS networking.
-
---
-
-This project is currently for educational and portfolio purposes.
+This project is developed for educational, learning, and portfolio purposes.
