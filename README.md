@@ -242,8 +242,6 @@ This project demonstrates practical experience with:
 
 ---
 
-# 📷 Screenshots
-
 ### Login Portal
 
 * Firebase Authentication
@@ -269,5 +267,6 @@ This project demonstrates practical experience with:
 * Institution-wide monitoring
 
 ---
+This project is developed for educational, learning, and portfolio purposes.
 
 This project is developed for educational, learning, and portfolio purposes.
