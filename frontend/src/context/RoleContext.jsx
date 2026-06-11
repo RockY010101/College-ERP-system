@@ -30,6 +30,7 @@ export const ROLES = {
  */
 export function RoleProvider({ children }) {
   const [role, setRole] = useState(null)
+  const [userName, setUserName] = useState(null)
   const [roleLoading, setRoleLoading] = useState(true)
   const { currentUser, isFirebaseConfigured } = useAuth()
 
@@ -45,6 +46,7 @@ export function RoleProvider({ children }) {
     // Demo user — role is stored on the mock user object
     if (currentUser.isDemo) {
       setRole(currentUser.role)
+      setUserName(currentUser.displayName || currentUser.role)
       setRoleLoading(false)
       return
     }
@@ -56,6 +58,7 @@ export function RoleProvider({ children }) {
         .then((userData) => {
           if (userData?.role) {
             setRole(userData.role)
+            setUserName(userData.name || currentUser.displayName || null)
           } else {
             // User exists in Firebase Auth but has no Firestore document/role
             setRole(null)
@@ -82,7 +85,7 @@ export function RoleProvider({ children }) {
     return roles.includes(role)
   }
 
-  const value = { role, setRole, hasRole, roleLoading, ROLES }
+  const value = { role, setRole, hasRole, roleLoading, userName, ROLES }
 
   return (
     <RoleContext.Provider value={value}>

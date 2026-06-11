@@ -1,38 +1,69 @@
-import DashboardLayout from '../../components/DashboardLayout';
+// ══════════════════════════════════════════════════════════════════════
+// AdminDashboard.jsx — Administration Hub
+// Data: fetched from /api/reports/admin (stats) + /api/students (enrollments)
+// Shows loading/empty state until backend returns real data.
+// ══════════════════════════════════════════════════════════════════════
 
-const stats = [
-  { id: 'total-students', icon: 'school', label: 'Total Students', value: '1,247', delta: '+38 this semester', variant: 'primary' },
-  { id: 'total-faculty', icon: 'groups', label: 'Total Faculty', value: '86', delta: '+4 new hires', variant: 'secondary' },
-  { id: 'active-courses', icon: 'menu_book', label: 'Active Courses', value: '32', delta: '6 starting soon', variant: 'tertiary' },
-  { id: 'departments', icon: 'apartment', label: 'Departments', value: '8', delta: 'All active', variant: 'success' },
-];
-
-const enrollments = [
-  { id: 'enr-1', name: 'Aarav Sharma', course: 'B.Tech Computer Science', semester: 'Sem 4', date: '18 May 2026', status: 'Confirmed' },
-  { id: 'enr-2', name: 'Priya Patel', course: 'MBA Finance', semester: 'Sem 2', date: '17 May 2026', status: 'Pending' },
-  { id: 'enr-3', name: 'Rohan Mehta', course: 'B.Sc Physics', semester: 'Sem 6', date: '16 May 2026', status: 'Confirmed' },
-  { id: 'enr-4', name: 'Sneha Iyer', course: 'B.Com Accounting', semester: 'Sem 2', date: '15 May 2026', status: 'Waitlisted' },
-  { id: 'enr-5', name: 'Karan Desai', course: 'M.Tech AI & ML', semester: 'Sem 1', date: '14 May 2026', status: 'Confirmed' },
-];
-
-const activities = [
-  { id: 'act-1', text: 'Faculty Dr. Nair uploaded grades for CS301 — Data Structures.', time: '10 minutes ago' },
-  { id: 'act-2', text: 'New student batch (2026–30) registration window opened.', time: '1 hour ago' },
-  { id: 'act-3', text: 'Library module updated: 240 new e-books catalogued.', time: '3 hours ago' },
-  { id: 'act-4', text: 'Exam schedule for Semester 4 published by Controller of Exams.', time: '5 hours ago' },
-  { id: 'act-5', text: 'Hostel block-C maintenance request approved by Admin Office.', time: 'Yesterday' },
-];
+import { useState, useEffect } from 'react'
+import DashboardLayout from '../../components/DashboardLayout'
+import apiClient from '../../services/apiClient'
 
 const chipVariant = (status) => {
   switch (status) {
-    case 'Confirmed': return 'chip chip--success';
-    case 'Pending': return 'chip chip--primary';
-    case 'Waitlisted': return 'chip chip--neutral';
-    default: return 'chip';
+    case 'Confirmed': return 'chip chip--success'
+    case 'Pending':   return 'chip chip--primary'
+    case 'Waitlisted':return 'chip chip--neutral'
+    default:          return 'chip'
   }
-};
+}
 
 export default function AdminDashboard() {
+  const [report, setReport]           = useState(null)
+  const [enrollments, setEnrollments] = useState([])
+  const [activities, setActivities]   = useState([])
+  const [loading, setLoading]         = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const [reportRes, studentsRes] = await Promise.allSettled([
+          apiClient.get('/reports/admin'),
+          apiClient.get('/students'),
+        ])
+        if (!cancelled) {
+          if (reportRes.status === 'fulfilled')   setReport(reportRes.value.data)
+          if (studentsRes.status === 'fulfilled') {
+            const data = studentsRes.value.data
+            // Support array response or wrapped { enrollments: [] }
+            setEnrollments(Array.isArray(data) ? data : (data?.enrollments ?? []))
+            setActivities(data?.activities ?? [])
+          }
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const stats = [
+    { id: 'total-students',  icon: 'school',     label: 'Total Students',  value: report?.totalStudents  ?? '—', delta: '', variant: 'primary'   },
+    { id: 'total-faculty',   icon: 'groups',     label: 'Total Faculty',   value: report?.totalFaculty   ?? '—', delta: '', variant: 'secondary' },
+    { id: 'active-courses',  icon: 'menu_book',  label: 'Active Courses',  value: report?.activeCourses  ?? '—', delta: '', variant: 'tertiary'  },
+    { id: 'departments',     icon: 'apartment',  label: 'Departments',     value: report?.totalDepartments ?? '—', delta: '', variant: 'success' },
+  ]
+
+  const emptyRow = (cols, msg = 'No data available yet') => (
+    <tr>
+      <td colSpan={cols} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+        {msg}
+      </td>
+    </tr>
+  )
+
   return (
     <DashboardLayout>
       <div id="admin-dashboard">
@@ -41,6 +72,7 @@ export default function AdminDashboard() {
           <p>Manage students, faculty, courses, and institutional operations at a glance.</p>
         </div>
 
+        {/* ── Stat Cards ── */}
         <div className="stat-grid" id="admin-stat-grid">
           {stats.map((s) => (
             <div className="stat-card" key={s.id} id={s.id}>
@@ -50,13 +82,14 @@ export default function AdminDashboard() {
               <div className="stat-card__info">
                 <span className="stat-card__label">{s.label}</span>
                 <span className="stat-card__value">{s.value}</span>
-                <span className="stat-card__delta">{s.delta}</span>
+                {s.delta && <span className="stat-card__delta">{s.delta}</span>}
               </div>
             </div>
           ))}
         </div>
 
         <div className="dashboard-grid" id="admin-dashboard-grid">
+          {/* ── Recent Enrollments ── */}
           <div className="section-panel" id="recent-enrollments-panel">
             <div className="section-panel__header">
               <span className="material-symbols-rounded">how_to_reg</span>
@@ -73,36 +106,49 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {enrollments.map((e) => (
-                  <tr key={e.id} id={e.id}>
-                    <td>{e.name}</td>
-                    <td>{e.course}</td>
-                    <td>{e.semester}</td>
-                    <td>{e.date}</td>
-                    <td><span className={chipVariant(e.status)}>{e.status}</span></td>
-                  </tr>
-                ))}
+                {loading ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Loading…</td></tr>
+                ) : enrollments.length === 0 ? (
+                  emptyRow(5, 'No enrollment records yet')
+                ) : (
+                  enrollments.slice(0, 10).map((e, i) => (
+                    <tr key={e.studentId ?? e.id ?? i} id={`enr-${e.studentId ?? i}`}>
+                      <td>{e.name ?? `${e.firstName ?? ''} ${e.lastName ?? ''}`.trim()}</td>
+                      <td>{e.course ?? e.courseName ?? '—'}</td>
+                      <td>{e.semester ? `Sem ${e.semester}` : '—'}</td>
+                      <td>{e.enrollmentDate ?? e.date ?? '—'}</td>
+                      <td><span className={chipVariant(e.status ?? 'Confirmed')}>{e.status ?? 'Confirmed'}</span></td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
+          {/* ── Recent Activity ── */}
           <div className="section-panel" id="recent-activity-panel">
             <div className="section-panel__header">
               <span className="material-symbols-rounded">timeline</span>
               <h2>Recent Activity</h2>
             </div>
             <div id="admin-activity-feed">
-              {activities.map((a) => (
-                <div className="activity-item" key={a.id} id={a.id}>
-                  <span className="activity-item__dot"></span>
-                  <span className="activity-item__text">{a.text}</span>
-                  <span className="activity-item__time">{a.time}</span>
-                </div>
-              ))}
+              {loading ? (
+                <p style={{ padding: '1rem', color: 'var(--color-text-muted)' }}>Loading…</p>
+              ) : activities.length === 0 ? (
+                <p style={{ padding: '1rem', color: 'var(--color-text-muted)' }}>No recent activity available.</p>
+              ) : (
+                activities.map((a, i) => (
+                  <div className="activity-item" key={i} id={`act-${i}`}>
+                    <span className="activity-item__dot"></span>
+                    <span className="activity-item__text">{a.text ?? a.message}</span>
+                    <span className="activity-item__time">{a.time ?? a.createdAt ?? ''}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
       </div>
     </DashboardLayout>
-  );
+  )
 }

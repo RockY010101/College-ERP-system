@@ -10,7 +10,7 @@ import { useRole } from '../context/RoleContext'
 
 function DashboardLayout({ children }) {
   const { currentUser } = useAuth()
-  const { role } = useRole()
+  const { role, userName } = useRole()
 
   return (
     <div className="app-shell">
@@ -20,7 +20,7 @@ function DashboardLayout({ children }) {
         <header className="topbar" id="main-topbar">
           <div className="topbar__left">
             <h2 className="topbar__greeting">
-              Welcome back, <strong>{currentUser?.displayName || 'User'}</strong>
+              Welcome back, <strong>{userName || currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User'}</strong>
             </h2>
           </div>
           <div className="topbar__right">
