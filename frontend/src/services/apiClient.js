@@ -7,7 +7,9 @@ import axios from 'axios'
 import { auth } from '../firebase/firebaseConfig'
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+  // Use relative /api so Vite dev proxy routes to http://localhost:8080 during development.
+  // In production, set VITE_API_BASE_URL to your deployed backend URL (e.g. https://your-api.com/api).
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
