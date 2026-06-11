@@ -1,35 +1,15 @@
 // ══════════════════════════════════════════════════════════════════════
-// AdminStudentsPage.jsx — Student Directory for Admin module
+// AdminStudentsPage.jsx — Student Directory
+// Data: GET /api/students
 // ══════════════════════════════════════════════════════════════════════
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import SearchBar from '../../components/SearchBar'
 import FilterDropdown from '../../components/FilterDropdown'
 import Modal from '../../components/Modal'
 import EmptyState from '../../components/EmptyState'
-
-/* ── Static Data ── */
-const students = [
-  { id: 's-1', rollNo: 'CSE2024001', firstName: 'Aarav', lastName: 'Sharma', department: 'Computer Science', semester: 4, email: 'aarav.sharma@college.edu', phone: '9876543210', status: 'Active' },
-  { id: 's-2', rollNo: 'ECE2024012', firstName: 'Priya', lastName: 'Patel', department: 'Electronics', semester: 4, email: 'priya.patel@college.edu', phone: '9823456781', status: 'Active' },
-  { id: 's-3', rollNo: 'ME2023045', firstName: 'Rohan', lastName: 'Mehta', department: 'Mechanical', semester: 6, email: 'rohan.mehta@college.edu', phone: '9812345678', status: 'Active' },
-  { id: 's-4', rollNo: 'CSE2024003', firstName: 'Sneha', lastName: 'Iyer', department: 'Computer Science', semester: 4, email: 'sneha.iyer@college.edu', phone: '9845671234', status: 'Active' },
-  { id: 's-5', rollNo: 'CE2022078', firstName: 'Karan', lastName: 'Desai', department: 'Civil', semester: 8, email: 'karan.desai@college.edu', phone: '9867891234', status: 'Alumni' },
-  { id: 's-6', rollNo: 'ECE2023020', firstName: 'Ananya', lastName: 'Reddy', department: 'Electronics', semester: 6, email: 'ananya.reddy@college.edu', phone: '9834567890', status: 'Active' },
-  { id: 's-7', rollNo: 'CSE2025010', firstName: 'Vikram', lastName: 'Singh', department: 'Computer Science', semester: 2, email: 'vikram.singh@college.edu', phone: '9801234567', status: 'Active' },
-  { id: 's-8', rollNo: 'ME2024033', firstName: 'Divya', lastName: 'Nair', department: 'Mechanical', semester: 4, email: 'divya.nair@college.edu', phone: '9856781234', status: 'Inactive' },
-  { id: 's-9', rollNo: 'CE2024056', firstName: 'Arjun', lastName: 'Gupta', department: 'Civil', semester: 4, email: 'arjun.gupta@college.edu', phone: '9823451234', status: 'Active' },
-  { id: 's-10', rollNo: 'CSE2022002', firstName: 'Meera', lastName: 'Joshi', department: 'Computer Science', semester: 8, email: 'meera.joshi@college.edu', phone: '9878901234', status: 'Alumni' },
-]
-
-const departmentOptions = [
-  { value: '', label: 'All Departments' },
-  { value: 'Computer Science', label: 'Computer Science' },
-  { value: 'Electronics', label: 'Electronics' },
-  { value: 'Mechanical', label: 'Mechanical' },
-  { value: 'Civil', label: 'Civil' },
-]
+import apiClient from '../../services/apiClient'
 
 const semesterOptions = [
   { value: '', label: 'All Semesters' },
@@ -45,36 +25,53 @@ const statusOptions = [
 
 const chipVariant = (status) => {
   switch (status) {
-    case 'Active': return 'chip chip--success'
+    case 'Active':   return 'chip chip--success'
     case 'Inactive': return 'chip chip--error'
-    case 'Alumni': return 'chip chip--neutral'
-    default: return 'chip'
+    case 'Alumni':   return 'chip chip--neutral'
+    default:         return 'chip'
   }
 }
 
-/* ── Component ── */
 export default function AdminStudentsPage() {
-  const [search, setSearch] = useState('')
-  const [deptFilter, setDeptFilter] = useState('')
-  const [semFilter, setSemFilter] = useState('')
+  const [students, setStudents]       = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(null)
+  const [search, setSearch]           = useState('')
+  const [deptFilter, setDeptFilter]   = useState('')
+  const [semFilter, setSemFilter]     = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
+  const [modalOpen, setModalOpen]     = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get('/students')
+      .then(res => { if (!cancelled) setStudents(Array.isArray(res.data) ? res.data : []) })
+      .catch(() => { if (!cancelled) setError('Failed to load students') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Build dept options dynamically from data
+  const deptOptions = useMemo(() => {
+    const depts = [...new Set(students.map(s => s.department).filter(Boolean))]
+    return [{ value: '', label: 'All Departments' }, ...depts.map(d => ({ value: d, label: d }))]
+  }, [students])
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
       const q = search.toLowerCase()
-      const matchesSearch = !q || s.firstName.toLowerCase().includes(q) || s.lastName.toLowerCase().includes(q) || s.rollNo.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
-      const matchesDept = !deptFilter || s.department === deptFilter
-      const matchesSem = !semFilter || s.semester === Number(semFilter)
+      const name = `${s.firstName ?? ''} ${s.lastName ?? ''} ${s.name ?? ''}`.toLowerCase()
+      const matchesSearch = !q || name.includes(q) || (s.rollNo ?? s.rollNumber ?? '').toLowerCase().includes(q) || (s.email ?? '').toLowerCase().includes(q)
+      const matchesDept   = !deptFilter   || s.department === deptFilter
+      const matchesSem    = !semFilter    || s.semester === Number(semFilter)
       const matchesStatus = !statusFilter || s.status === statusFilter
       return matchesSearch && matchesDept && matchesSem && matchesStatus
     })
-  }, [search, deptFilter, semFilter, statusFilter])
+  }, [students, search, deptFilter, semFilter, statusFilter])
 
   return (
     <DashboardLayout>
       <div id="admin-students-page">
-        {/* ── Page Header ── */}
         <div className="page-header-row">
           <div className="page-header">
             <h1>Student Directory</h1>
@@ -86,17 +83,19 @@ export default function AdminStudentsPage() {
           </button>
         </div>
 
-        {/* ── Toolbar ── */}
         <div className="toolbar" id="students-toolbar">
           <SearchBar placeholder="Search by name, roll no…" value={search} onChange={setSearch} id="students-search" />
-          <FilterDropdown label="Dept" options={departmentOptions} value={deptFilter} onChange={setDeptFilter} id="students-dept-filter" />
+          <FilterDropdown label="Dept" options={deptOptions} value={deptFilter} onChange={setDeptFilter} id="students-dept-filter" />
           <FilterDropdown label="Sem" options={semesterOptions} value={semFilter} onChange={setSemFilter} id="students-sem-filter" />
           <FilterDropdown label="Status" options={statusOptions} value={statusFilter} onChange={setStatusFilter} id="students-status-filter" />
         </div>
 
-        {/* ── Data Table ── */}
-        {filtered.length === 0 ? (
-          <EmptyState icon="school" title="No students found" message="Try adjusting your search or filter criteria." id="students-empty" />
+        {loading ? (
+          <div className="section-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading students…</div>
+        ) : error ? (
+          <div className="section-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-error)' }}>{error}</div>
+        ) : filtered.length === 0 ? (
+          <EmptyState icon="school" title="No students found" message="No student records available yet." id="students-empty" />
         ) : (
           <div className="section-panel" id="students-table-panel">
             <table className="data-table" id="students-table">
@@ -113,21 +112,21 @@ export default function AdminStudentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((s) => (
-                  <tr key={s.id} id={s.id}>
-                    <td><strong>{s.rollNo}</strong></td>
-                    <td>{s.firstName} {s.lastName}</td>
-                    <td>{s.department}</td>
-                    <td>Sem {s.semester}</td>
-                    <td>{s.email}</td>
-                    <td>{s.phone}</td>
-                    <td><span className={chipVariant(s.status)}>{s.status}</span></td>
+                {filtered.map((s, i) => (
+                  <tr key={s.studentId ?? s.id ?? i} id={`student-${s.studentId ?? i}`}>
+                    <td><strong>{s.rollNo ?? s.rollNumber ?? '—'}</strong></td>
+                    <td>{s.name ?? `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim()}</td>
+                    <td>{s.department ?? '—'}</td>
+                    <td>{s.semester ? `Sem ${s.semester}` : '—'}</td>
+                    <td>{s.email ?? '—'}</td>
+                    <td>{s.phone ?? s.phoneNumber ?? '—'}</td>
+                    <td><span className={chipVariant(s.status ?? 'Active')}>{s.status ?? 'Active'}</span></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="btn-icon" title="View student" id={`view-${s.id}`}>
+                        <button className="btn-icon" title="View student" id={`view-student-${s.studentId ?? i}`}>
                           <span className="material-symbols-rounded">visibility</span>
                         </button>
-                        <button className="btn-icon" title="Edit student" id={`edit-${s.id}`}>
+                        <button className="btn-icon" title="Edit student" id={`edit-student-${s.studentId ?? i}`}>
                           <span className="material-symbols-rounded">edit</span>
                         </button>
                       </div>
@@ -139,7 +138,6 @@ export default function AdminStudentsPage() {
           </div>
         )}
 
-        {/* ── Add Student Modal ── */}
         <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Student" id="add-student-modal">
           <form className="form-grid" id="add-student-form" onSubmit={(e) => e.preventDefault()}>
             <div className="form-group">
@@ -164,13 +162,7 @@ export default function AdminStudentsPage() {
             </div>
             <div className="form-group">
               <label htmlFor="student-dept">Department</label>
-              <select id="student-dept">
-                <option value="">Select department</option>
-                <option value="Computer Science">Computer Science</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Mechanical">Mechanical</option>
-                <option value="Civil">Civil</option>
-              </select>
+              <input type="text" id="student-dept" placeholder="e.g. Computer Science" />
             </div>
             <div className="form-group">
               <label htmlFor="student-sem">Semester</label>
@@ -184,19 +176,6 @@ export default function AdminStudentsPage() {
             <div className="form-group">
               <label htmlFor="student-dob">Date of Birth</label>
               <input type="date" id="student-dob" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="student-gender">Gender</label>
-              <select id="student-gender">
-                <option value="">Select gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div className="form-group form-group--full">
-              <label htmlFor="student-address">Address</label>
-              <textarea id="student-address" rows="3" placeholder="Full postal address" />
             </div>
             <div className="form-actions form-group--full">
               <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>

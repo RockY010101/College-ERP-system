@@ -1,63 +1,59 @@
 // ══════════════════════════════════════════════════════════════════════
-// AdminCoursesPage.jsx — Course Management for Admin module
+// AdminCoursesPage.jsx — Course Management
+// Data: GET /api/courses
 // ══════════════════════════════════════════════════════════════════════
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import SearchBar from '../../components/SearchBar'
 import FilterDropdown from '../../components/FilterDropdown'
 import Modal from '../../components/Modal'
 import EmptyState from '../../components/EmptyState'
-
-/* ── Static Data ── */
-const courses = [
-  { id: 'c-1', code: 'CS301', name: 'Data Structures & Algorithms', department: 'Computer Science', credits: 4, faculty: 'Dr. Raghav Menon', enrollment: 120, status: 'Active' },
-  { id: 'c-2', code: 'CS302', name: 'Database Management Systems', department: 'Computer Science', credits: 4, faculty: 'Neha Saxena', enrollment: 115, status: 'Active' },
-  { id: 'c-3', code: 'CS401', name: 'Operating Systems', department: 'Computer Science', credits: 4, faculty: 'Dr. Raghav Menon', enrollment: 98, status: 'Active' },
-  { id: 'c-4', code: 'CS402', name: 'Computer Networks', department: 'Computer Science', credits: 3, faculty: 'Neha Saxena', enrollment: 102, status: 'Active' },
-  { id: 'c-5', code: 'CS501', name: 'Software Engineering', department: 'Computer Science', credits: 3, faculty: 'Dr. Raghav Menon', enrollment: 88, status: 'Active' },
-  { id: 'c-6', code: 'EC301', name: 'Signals & Systems', department: 'Electronics', credits: 4, faculty: 'Dr. Sunita Verma', enrollment: 78, status: 'Active' },
-  { id: 'c-7', code: 'EC302', name: 'Digital Electronics', department: 'Electronics', credits: 3, faculty: 'Dr. Pooja Bhatt', enrollment: 82, status: 'Active' },
-  { id: 'c-8', code: 'ME301', name: 'Thermodynamics', department: 'Mechanical', credits: 4, faculty: 'Amit Kulkarni', enrollment: 65, status: 'Active' },
-  { id: 'c-9', code: 'CE301', name: 'Structural Analysis', department: 'Civil', credits: 4, faculty: 'Dr. Lakshmi Narayan', enrollment: 55, status: 'Active' },
-  { id: 'c-10', code: 'CS201', name: 'Discrete Mathematics', department: 'Computer Science', credits: 3, faculty: 'Neha Saxena', enrollment: 130, status: 'Inactive' },
-]
-
-const departmentOptions = [
-  { value: '', label: 'All Departments' },
-  { value: 'Computer Science', label: 'Computer Science' },
-  { value: 'Electronics', label: 'Electronics' },
-  { value: 'Mechanical', label: 'Mechanical' },
-  { value: 'Civil', label: 'Civil' },
-]
+import apiClient from '../../services/apiClient'
 
 const chipVariant = (status) => {
   switch (status) {
-    case 'Active': return 'chip chip--success'
+    case 'Active':   return 'chip chip--success'
     case 'Inactive': return 'chip chip--neutral'
-    default: return 'chip'
+    default:         return 'chip'
   }
 }
 
-/* ── Component ── */
 export default function AdminCoursesPage() {
-  const [search, setSearch] = useState('')
-  const [deptFilter, setDeptFilter] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
+  const [courses, setCourses]         = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(null)
+  const [search, setSearch]           = useState('')
+  const [deptFilter, setDeptFilter]   = useState('')
+  const [modalOpen, setModalOpen]     = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get('/courses')
+      .then(res => { if (!cancelled) setCourses(Array.isArray(res.data) ? res.data : []) })
+      .catch(() => { if (!cancelled) setError('Failed to load courses') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Build dept options dynamically
+  const departmentOptions = useMemo(() => {
+    const depts = [...new Set(courses.map(c => c.department ?? c.departmentName).filter(Boolean))]
+    return [{ value: '', label: 'All Departments' }, ...depts.map(d => ({ value: d, label: d }))]
+  }, [courses])
 
   const filtered = useMemo(() => {
     return courses.filter((c) => {
       const q = search.toLowerCase()
-      const matchesSearch = !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q) || c.faculty.toLowerCase().includes(q)
-      const matchesDept = !deptFilter || c.department === deptFilter
+      const matchesSearch = !q || (c.name ?? c.courseName ?? '').toLowerCase().includes(q) || (c.code ?? c.courseCode ?? '').toLowerCase().includes(q) || (c.faculty ?? c.assignedFaculty ?? '').toLowerCase().includes(q)
+      const matchesDept   = !deptFilter || (c.department ?? c.departmentName) === deptFilter
       return matchesSearch && matchesDept
     })
-  }, [search, deptFilter])
+  }, [courses, search, deptFilter])
 
   return (
     <DashboardLayout>
       <div id="admin-courses-page">
-        {/* ── Page Header ── */}
         <div className="page-header-row">
           <div className="page-header">
             <h1>Course Management</h1>
@@ -69,15 +65,17 @@ export default function AdminCoursesPage() {
           </button>
         </div>
 
-        {/* ── Toolbar ── */}
         <div className="toolbar" id="courses-toolbar">
           <SearchBar placeholder="Search by course name, code, faculty…" value={search} onChange={setSearch} id="courses-search" />
           <FilterDropdown label="Dept" options={departmentOptions} value={deptFilter} onChange={setDeptFilter} id="courses-dept-filter" />
         </div>
 
-        {/* ── Data Table ── */}
-        {filtered.length === 0 ? (
-          <EmptyState icon="menu_book" title="No courses found" message="Try adjusting your search or filter criteria." id="courses-empty" />
+        {loading ? (
+          <div className="section-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading courses…</div>
+        ) : error ? (
+          <div className="section-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-error)' }}>{error}</div>
+        ) : filtered.length === 0 ? (
+          <EmptyState icon="menu_book" title="No courses found" message="No course records available yet." id="courses-empty" />
         ) : (
           <div className="section-panel" id="courses-table-panel">
             <table className="data-table" id="courses-table">
@@ -94,24 +92,24 @@ export default function AdminCoursesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
-                  <tr key={c.id} id={c.id}>
-                    <td><strong>{c.code}</strong></td>
-                    <td>{c.name}</td>
-                    <td>{c.department}</td>
-                    <td>{c.credits}</td>
-                    <td>{c.faculty}</td>
-                    <td>{c.enrollment}</td>
-                    <td><span className={chipVariant(c.status)}>{c.status}</span></td>
+                {filtered.map((c, i) => (
+                  <tr key={c.courseId ?? c.id ?? i} id={`course-${c.courseId ?? i}`}>
+                    <td><strong>{c.code ?? c.courseCode ?? '—'}</strong></td>
+                    <td>{c.name ?? c.courseName ?? '—'}</td>
+                    <td>{c.department ?? c.departmentName ?? '—'}</td>
+                    <td>{c.credits ?? '—'}</td>
+                    <td>{c.faculty ?? c.assignedFaculty ?? '—'}</td>
+                    <td>{c.enrollment ?? c.enrolledCount ?? '—'}</td>
+                    <td><span className={chipVariant(c.status ?? 'Active')}>{c.status ?? 'Active'}</span></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="btn-icon" title="View course" id={`view-${c.id}`}>
+                        <button className="btn-icon" title="View course" id={`view-course-${c.courseId ?? i}`}>
                           <span className="material-symbols-rounded">visibility</span>
                         </button>
-                        <button className="btn-icon" title="Edit course" id={`edit-${c.id}`}>
+                        <button className="btn-icon" title="Edit course" id={`edit-course-${c.courseId ?? i}`}>
                           <span className="material-symbols-rounded">edit</span>
                         </button>
-                        <button className="btn-icon btn-icon--danger" title="Delete course" id={`delete-${c.id}`}>
+                        <button className="btn-icon btn-icon--danger" title="Delete course" id={`delete-course-${c.courseId ?? i}`}>
                           <span className="material-symbols-rounded">delete</span>
                         </button>
                       </div>
@@ -123,7 +121,6 @@ export default function AdminCoursesPage() {
           </div>
         )}
 
-        {/* ── Add Course Modal ── */}
         <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Course" id="add-course-modal">
           <form className="form-grid" id="add-course-form" onSubmit={(e) => e.preventDefault()}>
             <div className="form-group">
@@ -136,35 +133,13 @@ export default function AdminCoursesPage() {
             </div>
             <div className="form-group">
               <label htmlFor="course-dept">Department</label>
-              <select id="course-dept">
-                <option value="">Select department</option>
-                <option value="Computer Science">Computer Science</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Mechanical">Mechanical</option>
-                <option value="Civil">Civil</option>
-              </select>
+              <input type="text" id="course-dept" placeholder="e.g. Computer Science" />
             </div>
             <div className="form-group">
               <label htmlFor="course-credits">Credits</label>
               <select id="course-credits">
                 <option value="">Select credits</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="course-faculty">Assigned Faculty</label>
-              <select id="course-faculty">
-                <option value="">Select faculty</option>
-                <option value="Dr. Raghav Menon">Dr. Raghav Menon</option>
-                <option value="Dr. Sunita Verma">Dr. Sunita Verma</option>
-                <option value="Amit Kulkarni">Amit Kulkarni</option>
-                <option value="Dr. Lakshmi Narayan">Dr. Lakshmi Narayan</option>
-                <option value="Neha Saxena">Neha Saxena</option>
-                <option value="Dr. Pooja Bhatt">Dr. Pooja Bhatt</option>
+                {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
             <div className="form-group">
