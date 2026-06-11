@@ -1,27 +1,16 @@
 // ══════════════════════════════════════════════════════════════════════
-// SuperAdminCoursesPage.jsx — Course Management for Super Admin
+// SuperAdminCoursesPage.jsx — Course Management
+// Data: fetched from /api/courses
 // ══════════════════════════════════════════════════════════════════════
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import SearchBar from '../../components/SearchBar'
 import FilterDropdown from '../../components/FilterDropdown'
 import Modal from '../../components/Modal'
 import EmptyState from '../../components/EmptyState'
+import apiClient from '../../services/apiClient'
 
-/* ── Mock Data ── */
-const coursesData = [
-  { id: 'crs-1', code: 'CS301', name: 'Data Structures & Algorithms', department: 'Computer Science', credits: 4, semester: 3, faculty: 'Dr. Ramesh Kumar', enrolled: 72, status: 'Active' },
-  { id: 'crs-2', code: 'CS502', name: 'Machine Learning', department: 'Computer Science', credits: 4, semester: 5, faculty: 'Dr. Priya Patel', enrolled: 65, status: 'Active' },
-  { id: 'crs-3', code: 'CS401', name: 'Database Management Systems', department: 'Computer Science', credits: 3, semester: 4, faculty: 'Prof. Sunil Shetty', enrolled: 78, status: 'Active' },
-  { id: 'crs-4', code: 'ME201', name: 'Thermodynamics', department: 'Mechanical Engg', credits: 4, semester: 2, faculty: 'Dr. Sunita Verma', enrolled: 60, status: 'Active' },
-  { id: 'crs-5', code: 'ECE301', name: 'Digital Signal Processing', department: 'ECE', credits: 3, semester: 3, faculty: 'Dr. Anil Hegde', enrolled: 55, status: 'Active' },
-  { id: 'crs-6', code: 'CS601', name: 'Computer Networks', department: 'Computer Science', credits: 3, semester: 6, faculty: 'Dr. Kavitha Rao', enrolled: 58, status: 'Active' },
-  { id: 'crs-7', code: 'CE401', name: 'Structural Analysis', department: 'Civil Engg', credits: 4, semester: 4, faculty: 'Dr. Prakash Rao', enrolled: 45, status: 'Inactive' },
-  { id: 'crs-8', code: 'MBA301', name: 'Financial Management', department: 'MBA', credits: 3, semester: 3, faculty: 'Prof. Ajay Nair', enrolled: 40, status: 'Active' },
-  { id: 'crs-9', code: 'CS701', name: 'Artificial Intelligence', department: 'Computer Science', credits: 4, semester: 7, faculty: 'Dr. Ramesh Kumar', enrolled: 48, status: 'Active' },
-  { id: 'crs-10', code: 'ECE501', name: 'VLSI Design', department: 'ECE', credits: 4, semester: 5, faculty: 'Dr. Meera Joshi', enrolled: 38, status: 'Inactive' },
-]
 
 const departmentOptions = [
   { value: '', label: 'All Departments' },
@@ -61,6 +50,18 @@ export default function SuperAdminCoursesPage() {
   const [deptFilter, setDeptFilter] = useState('')
   const [semFilter, setSemFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [coursesData, setCoursesData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get('/courses')
+      .then(res => { if (!cancelled) setCoursesData(Array.isArray(res.data) ? res.data : []) })
+      .catch(() => { if (!cancelled) setError('Failed to load courses') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   /* ── Filter logic ── */
   const filteredCourses = useMemo(() => {
@@ -68,14 +69,14 @@ export default function SuperAdminCoursesPage() {
       const q = searchQuery.toLowerCase()
       const matchesSearch =
         !searchQuery ||
-        c.code.toLowerCase().includes(q) ||
-        c.name.toLowerCase().includes(q) ||
-        c.faculty.toLowerCase().includes(q)
+        (c.code ?? '').toLowerCase().includes(q) ||
+        (c.name ?? '').toLowerCase().includes(q) ||
+        (c.faculty ?? c.assignedFaculty ?? '').toLowerCase().includes(q)
       const matchesDept = !deptFilter || c.department === deptFilter
       const matchesSem = !semFilter || c.semester === Number(semFilter)
       return matchesSearch && matchesDept && matchesSem
     })
-  }, [searchQuery, deptFilter, semFilter])
+  }, [searchQuery, deptFilter, semFilter, coursesData])
 
   return (
     <DashboardLayout>
@@ -120,13 +121,12 @@ export default function SuperAdminCoursesPage() {
 
         {/* ── Data Table ── */}
         <div className="section-panel" id="courses-table-panel">
-          {filteredCourses.length === 0 ? (
-            <EmptyState
-              icon="menu_book"
-              title="No courses found"
-              message="Try adjusting your search or filter criteria."
-              id="courses-empty"
-            />
+          {loading ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading…</p>
+          ) : error ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-error)' }}>{error}</p>
+          ) : filteredCourses.length === 0 ? (
+            <EmptyState icon="menu_book" title="No courses found" message="No courses returned from server yet." id="courses-empty" />
           ) : (
             <table className="data-table" id="courses-data-table">
               <thead>
@@ -142,20 +142,16 @@ export default function SuperAdminCoursesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCourses.map((course) => (
-                  <tr key={course.id} id={course.id}>
-                    <td>
-                      <span className="chip chip--neutral">{course.code}</span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>{course.name}</td>
-                    <td>{course.department}</td>
-                    <td>{course.credits}</td>
-                    <td>{course.semester}</td>
-                    <td>{course.faculty}</td>
-                    <td>{course.enrolled}</td>
-                    <td>
-                      <span className={statusChipClass(course.status)}>{course.status}</span>
-                    </td>
+                {filteredCourses.map((course, i) => (
+                  <tr key={course.courseId ?? course.id ?? i} id={`course-${course.courseId ?? i}`}>
+                    <td><span className="chip chip--neutral">{course.code ?? course.courseCode ?? '—'}</span></td>
+                    <td style={{ fontWeight: 600 }}>{course.name ?? course.courseName}</td>
+                    <td>{course.department ?? course.departmentName ?? '—'}</td>
+                    <td>{course.credits ?? '—'}</td>
+                    <td>{course.semester ?? '—'}</td>
+                    <td>{course.faculty ?? course.assignedFaculty ?? '—'}</td>
+                    <td>{course.enrolled ?? course.enrolledCount ?? '—'}</td>
+                    <td><span className={statusChipClass(course.status ?? 'Active')}>{course.status ?? 'Active'}</span></td>
                   </tr>
                 ))}
               </tbody>

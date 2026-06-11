@@ -1,24 +1,15 @@
 // ══════════════════════════════════════════════════════════════════════
-// SuperAdminDepartmentsPage.jsx — Department Management for Super Admin
+// SuperAdminDepartmentsPage.jsx — Department Management
+// Data: fetched from /api/departments
 // ══════════════════════════════════════════════════════════════════════
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import SearchBar from '../../components/SearchBar'
 import Modal from '../../components/Modal'
 import EmptyState from '../../components/EmptyState'
+import apiClient from '../../services/apiClient'
 
-/* ── Mock Data ── */
-const departmentsData = [
-  { id: 'dept-cs', name: 'Computer Science', code: 'CS', hod: 'Dr. Ramesh Kumar', students: 310, faculty: 18, status: 'Active' },
-  { id: 'dept-me', name: 'Mechanical Engineering', code: 'ME', hod: 'Dr. Sunita Verma', students: 275, faculty: 15, status: 'Active' },
-  { id: 'dept-ece', name: 'Electronics & Communication', code: 'ECE', hod: 'Dr. Anil Hegde', students: 260, faculty: 14, status: 'Active' },
-  { id: 'dept-ce', name: 'Civil Engineering', code: 'CE', hod: 'Dr. Prakash Rao', students: 198, faculty: 12, status: 'Active' },
-  { id: 'dept-mba', name: 'Business Administration', code: 'MBA', hod: 'Prof. Ajay Nair', students: 180, faculty: 11, status: 'Active' },
-  { id: 'dept-phy', name: 'Physics', code: 'PHY', hod: 'Dr. Kavita Joshi', students: 142, faculty: 10, status: 'Under Review' },
-  { id: 'dept-math', name: 'Mathematics', code: 'MATH', hod: 'Dr. Sanjay Rao', students: 120, faculty: 9, status: 'Active' },
-  { id: 'dept-chem', name: 'Chemistry', code: 'CHEM', hod: 'Dr. Lakshmi Menon', students: 105, faculty: 8, status: 'Inactive' },
-]
 
 const hodOptions = [
   'Dr. Ramesh Kumar', 'Dr. Sunita Verma', 'Dr. Anil Hegde',
@@ -39,6 +30,18 @@ const statusChipClass = (status) => {
 export default function SuperAdminDepartmentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [departmentsData, setDepartmentsData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get('/departments')
+      .then(res => { if (!cancelled) setDepartmentsData(Array.isArray(res.data) ? res.data : []) })
+      .catch(() => { if (!cancelled) setError('Failed to load departments') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   /* ── Filter logic ── */
   const filteredDepts = useMemo(() => {
@@ -46,11 +49,11 @@ export default function SuperAdminDepartmentsPage() {
     const q = searchQuery.toLowerCase()
     return departmentsData.filter(
       (d) =>
-        d.name.toLowerCase().includes(q) ||
-        d.code.toLowerCase().includes(q) ||
-        d.hod.toLowerCase().includes(q)
+        (d.name ?? '').toLowerCase().includes(q) ||
+        (d.code ?? '').toLowerCase().includes(q) ||
+        (d.hod ?? d.head ?? '').toLowerCase().includes(q)
     )
-  }, [searchQuery])
+  }, [searchQuery, departmentsData])
 
   return (
     <DashboardLayout>
@@ -81,13 +84,12 @@ export default function SuperAdminDepartmentsPage() {
 
         {/* ── Data Table ── */}
         <div className="section-panel" id="departments-table-panel">
-          {filteredDepts.length === 0 ? (
-            <EmptyState
-              icon="domain_disabled"
-              title="No departments found"
-              message="Try adjusting your search criteria."
-              id="departments-empty"
-            />
+          {loading ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading…</p>
+          ) : error ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-error)' }}>{error}</p>
+          ) : filteredDepts.length === 0 ? (
+            <EmptyState icon="domain_disabled" title="No departments found" message="No departments returned from server yet." id="departments-empty" />
           ) : (
             <table className="data-table" id="departments-data-table">
               <thead>
@@ -102,24 +104,20 @@ export default function SuperAdminDepartmentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredDepts.map((dept) => (
-                  <tr key={dept.id} id={dept.id}>
+                {filteredDepts.map((dept, i) => (
+                  <tr key={dept.departmentId ?? dept.id ?? i} id={`dept-row-${dept.departmentId ?? i}`}>
                     <td style={{ fontWeight: 600 }}>{dept.name}</td>
-                    <td>
-                      <span className="chip chip--neutral">{dept.code}</span>
-                    </td>
-                    <td>{dept.hod}</td>
-                    <td>{dept.students}</td>
-                    <td>{dept.faculty}</td>
-                    <td>
-                      <span className={statusChipClass(dept.status)}>{dept.status}</span>
-                    </td>
+                    <td><span className="chip chip--neutral">{dept.code ?? '—'}</span></td>
+                    <td>{dept.hod ?? dept.head ?? '—'}</td>
+                    <td>{dept.studentCount ?? dept.students ?? '—'}</td>
+                    <td>{dept.facultyCount ?? dept.faculty ?? '—'}</td>
+                    <td><span className={statusChipClass(dept.status ?? 'Active')}>{dept.status ?? 'Active'}</span></td>
                     <td>
                       <div className="actions-cell">
-                        <button className="btn-icon" title="Edit department" id={`edit-${dept.id}`}>
+                        <button className="btn-icon" title="Edit department" id={`edit-dept-${dept.departmentId ?? i}`}>
                           <span className="material-symbols-rounded">edit</span>
                         </button>
-                        <button className="btn-icon btn-icon--danger" title="Delete department" id={`delete-${dept.id}`}>
+                        <button className="btn-icon btn-icon--danger" title="Delete department" id={`delete-dept-${dept.departmentId ?? i}`}>
                           <span className="material-symbols-rounded">delete</span>
                         </button>
                       </div>

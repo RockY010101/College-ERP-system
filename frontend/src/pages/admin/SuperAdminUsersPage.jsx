@@ -1,16 +1,18 @@
 // ══════════════════════════════════════════════════════════════════════
 // SuperAdminUsersPage.jsx — User Management for Super Admin
+// Data: fetched from /api/employees (all staff) + /api/students
 // ══════════════════════════════════════════════════════════════════════
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import SearchBar from '../../components/SearchBar'
 import FilterDropdown from '../../components/FilterDropdown'
 import Modal from '../../components/Modal'
 import EmptyState from '../../components/EmptyState'
+import apiClient from '../../services/apiClient'
 
-/* ── Mock Data ── */
-const usersData = [
+/* ── Removed hardcoded usersData — now fetched from API ── */
+const usersData_UNUSED = [
   { id: 'usr-1', firstName: 'Aarav', lastName: 'Sharma', email: 'aarav.sharma@nitk.edu.in', role: 'Super Admin', department: 'Administration', status: 'Active', lastLogin: '29 May 2026, 11:42 PM' },
   { id: 'usr-2', firstName: 'Priya', lastName: 'Patel', email: 'priya.patel@nitk.edu.in', role: 'Admin', department: 'Computer Science', status: 'Active', lastLogin: '29 May 2026, 10:18 PM' },
   { id: 'usr-3', firstName: 'Rajesh', lastName: 'Kumar', email: 'rajesh.kumar@nitk.edu.in', role: 'Faculty', department: 'Mechanical Engg', status: 'Active', lastLogin: '29 May 2026, 09:05 PM' },
@@ -69,6 +71,33 @@ export default function SuperAdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [usersData, setUsersData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  /* ── Fetch users from API ── */
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        // Fetch both employees and students, merge into one list
+        const [empRes, stuRes] = await Promise.allSettled([
+          apiClient.get('/employees'),
+          apiClient.get('/students'),
+        ])
+        const employees = empRes.status === 'fulfilled' && Array.isArray(empRes.value.data) ? empRes.value.data : []
+        const students  = stuRes.status === 'fulfilled' && Array.isArray(stuRes.value.data) ? stuRes.value.data : []
+        if (!cancelled) setUsersData([...employees, ...students])
+      } catch (err) {
+        if (!cancelled) setError('Failed to load users')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   /* ── Filter logic ── */
   const filteredUsers = useMemo(() => {
@@ -128,11 +157,15 @@ export default function SuperAdminUsersPage() {
 
         {/* ── Data Table ── */}
         <div className="section-panel" id="users-table-panel">
-          {filteredUsers.length === 0 ? (
+          {loading ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading users…</p>
+          ) : error ? (
+            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-error)' }}>{error}</p>
+          ) : filteredUsers.length === 0 ? (
             <EmptyState
               icon="person_off"
               title="No users found"
-              message="Try adjusting your search or filter criteria."
+              message="No users returned from the server yet."
               id="users-empty"
             />
           ) : (

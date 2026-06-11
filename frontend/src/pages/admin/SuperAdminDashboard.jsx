@@ -1,38 +1,79 @@
-import DashboardLayout from '../../components/DashboardLayout';
+// ══════════════════════════════════════════════════════════════════════
+// SuperAdminDashboard.jsx — System Overview
+// Data: stats from /api/reports/admin, departments from /api/departments
+// Falls back to empty state until backend is implemented.
+// ══════════════════════════════════════════════════════════════════════
 
-const stats = [
-  { id: 'total-users', icon: 'group', label: 'Total Users', value: '1,456', delta: '+62 this month', variant: 'primary' },
-  { id: 'system-uptime', icon: 'timer', label: 'System Uptime', value: '99.7%', delta: '30-day average', variant: 'success' },
-  { id: 'active-sessions', icon: 'devices', label: 'Active Sessions', value: '342', delta: '↑ 18% from yesterday', variant: 'secondary' },
-  { id: 'pending-approvals', icon: 'pending_actions', label: 'Pending Approvals', value: '12', delta: '3 urgent', variant: 'error' },
-];
-
-const departments = [
-  { id: 'dept-1', name: 'Computer Science', head: 'Dr. Ramesh Kumar', students: 310, faculty: 18, status: 'Active' },
-  { id: 'dept-2', name: 'Mechanical Engineering', head: 'Dr. Sunita Verma', students: 275, faculty: 15, status: 'Active' },
-  { id: 'dept-3', name: 'Business Administration', head: 'Prof. Ajay Nair', students: 198, faculty: 12, status: 'Active' },
-  { id: 'dept-4', name: 'Physics', head: 'Dr. Kavita Joshi', students: 142, faculty: 10, status: 'Under Review' },
-  { id: 'dept-5', name: 'Mathematics', head: 'Dr. Sanjay Rao', students: 120, faculty: 9, status: 'Active' },
-];
-
-const systemLogs = [
-  { id: 'log-1', text: 'Database backup completed successfully — 2.4 GB archived.', time: '5 minutes ago' },
-  { id: 'log-2', text: 'User role updated: priya.patel@college.edu promoted to Department Admin.', time: '25 minutes ago' },
-  { id: 'log-3', text: 'Security patch v3.8.1 applied to authentication module.', time: '2 hours ago' },
-  { id: 'log-4', text: 'Scheduled maintenance window configured for 22 May, 02:00–04:00 IST.', time: '4 hours ago' },
-  { id: 'log-5', text: 'Failed login attempt detected from IP 192.168.14.22 — account locked.', time: '6 hours ago' },
-];
+import { useState, useEffect } from 'react'
+import DashboardLayout from '../../components/DashboardLayout'
+import apiClient from '../../services/apiClient'
 
 const chipVariant = (status) => {
   switch (status) {
-    case 'Active': return 'chip chip--success';
-    case 'Under Review': return 'chip chip--primary';
-    case 'Inactive': return 'chip chip--error';
-    default: return 'chip chip--neutral';
+    case 'Active':       return 'chip chip--success'
+    case 'Under Review': return 'chip chip--primary'
+    case 'Inactive':     return 'chip chip--error'
+    default:             return 'chip chip--neutral'
   }
-};
+}
+
+function StatCard({ id, icon, label, value, delta, variant }) {
+  return (
+    <div className="stat-card" id={id}>
+      <div className={`stat-card__icon stat-card__icon--${variant}`}>
+        <span className="material-symbols-rounded">{icon}</span>
+      </div>
+      <div className="stat-card__info">
+        <span className="stat-card__label">{label}</span>
+        <span className="stat-card__value">{value ?? '—'}</span>
+        {delta && <span className="stat-card__delta">{delta}</span>}
+      </div>
+    </div>
+  )
+}
+
+function EmptyRow({ cols, message = 'No data available' }) {
+  return (
+    <tr>
+      <td colSpan={cols} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+        {message}
+      </td>
+    </tr>
+  )
+}
 
 export default function SuperAdminDashboard() {
+  const [overview, setOverview]         = useState(null)
+  const [departments, setDepartments]   = useState([])
+  const [logs, setLogs]                 = useState([])
+  const [loading, setLoading]           = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const [overviewRes, deptRes] = await Promise.allSettled([
+          apiClient.get('/reports/admin'),
+          apiClient.get('/departments'),
+        ])
+        if (!cancelled) {
+          if (overviewRes.status === 'fulfilled') setOverview(overviewRes.value.data)
+          if (deptRes.status === 'fulfilled')     setDepartments(Array.isArray(deptRes.value.data) ? deptRes.value.data : [])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const totalUsers   = overview?.totalUsers   ?? '—'
+  const uptime       = overview?.systemUptime ?? '—'
+  const sessions     = overview?.activeSessions ?? '—'
+  const pending      = overview?.pendingApprovals ?? '—'
+
   return (
     <DashboardLayout>
       <div id="super-admin-dashboard">
@@ -42,21 +83,14 @@ export default function SuperAdminDashboard() {
         </div>
 
         <div className="stat-grid" id="super-admin-stat-grid">
-          {stats.map((s) => (
-            <div className="stat-card" key={s.id} id={s.id}>
-              <div className={`stat-card__icon stat-card__icon--${s.variant}`}>
-                <span className="material-symbols-rounded">{s.icon}</span>
-              </div>
-              <div className="stat-card__info">
-                <span className="stat-card__label">{s.label}</span>
-                <span className="stat-card__value">{s.value}</span>
-                <span className="stat-card__delta">{s.delta}</span>
-              </div>
-            </div>
-          ))}
+          <StatCard id="total-users"        icon="group"           label="Total Users"        value={totalUsers} delta="" variant="primary"   />
+          <StatCard id="system-uptime"      icon="timer"           label="System Uptime"      value={uptime}     delta="" variant="success"   />
+          <StatCard id="active-sessions"    icon="devices"         label="Active Sessions"    value={sessions}   delta="" variant="secondary" />
+          <StatCard id="pending-approvals"  icon="pending_actions" label="Pending Approvals"  value={pending}    delta="" variant="error"     />
         </div>
 
         <div className="dashboard-grid" id="super-admin-dashboard-grid">
+          {/* Department Summary */}
           <div className="section-panel" id="department-summary-panel">
             <div className="section-panel__header">
               <span className="material-symbols-rounded">domain</span>
@@ -73,36 +107,49 @@ export default function SuperAdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {departments.map((d) => (
-                  <tr key={d.id} id={d.id}>
-                    <td>{d.name}</td>
-                    <td>{d.head}</td>
-                    <td>{d.students}</td>
-                    <td>{d.faculty}</td>
-                    <td><span className={chipVariant(d.status)}>{d.status}</span></td>
-                  </tr>
-                ))}
+                {loading ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Loading…</td></tr>
+                ) : departments.length === 0 ? (
+                  <EmptyRow cols={5} message="No departments found" />
+                ) : (
+                  departments.map((d, i) => (
+                    <tr key={d.departmentId ?? i} id={`dept-${d.departmentId ?? i}`}>
+                      <td>{d.name}</td>
+                      <td>{d.head ?? '—'}</td>
+                      <td>{d.studentCount ?? '—'}</td>
+                      <td>{d.facultyCount ?? '—'}</td>
+                      <td><span className={chipVariant(d.status ?? 'Active')}>{d.status ?? 'Active'}</span></td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
+          {/* System Logs */}
           <div className="section-panel" id="system-logs-panel">
             <div className="section-panel__header">
               <span className="material-symbols-rounded">terminal</span>
               <h2>System Logs</h2>
             </div>
             <div id="system-logs-feed">
-              {systemLogs.map((log) => (
-                <div className="activity-item" key={log.id} id={log.id}>
-                  <span className="activity-item__dot"></span>
-                  <span className="activity-item__text">{log.text}</span>
-                  <span className="activity-item__time">{log.time}</span>
-                </div>
-              ))}
+              {loading ? (
+                <p style={{ padding: '1rem', color: 'var(--color-text-muted)' }}>Loading…</p>
+              ) : logs.length === 0 ? (
+                <p style={{ padding: '1rem', color: 'var(--color-text-muted)' }}>No system logs available.</p>
+              ) : (
+                logs.map((log, i) => (
+                  <div className="activity-item" key={i} id={`log-${i}`}>
+                    <span className="activity-item__dot"></span>
+                    <span className="activity-item__text">{log.message ?? log.text}</span>
+                    <span className="activity-item__time">{log.time ?? ''}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
       </div>
     </DashboardLayout>
-  );
+  )
 }

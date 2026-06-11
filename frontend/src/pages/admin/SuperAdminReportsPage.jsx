@@ -1,67 +1,43 @@
 // ══════════════════════════════════════════════════════════════════════
-// SuperAdminReportsPage.jsx — Reports Dashboard for Super Admin
+// SuperAdminReportsPage.jsx — Reports Dashboard
+// Data: fetched from /api/reports/admin
+// Charts render empty state until backend returns real data.
 // ══════════════════════════════════════════════════════════════════════
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-
-/* ── Stat Cards ── */
-const stats = [
-  { id: 'report-enrollments', icon: 'school', label: 'Total Enrollments', value: '2,845', delta: '+126 this semester', variant: 'primary' },
-  { id: 'report-active-users', icon: 'group', label: 'Active Users', value: '1,392', delta: '↑ 8.2% from last month', variant: 'success' },
-  { id: 'report-revenue', icon: 'payments', label: 'Revenue Collected', value: '₹3.84 Cr', delta: '82% of target', variant: 'secondary' },
-  { id: 'report-attendance', icon: 'event_available', label: 'Avg Attendance', value: '87.4%', delta: '↑ 2.1% vs last sem', variant: 'tertiary' },
-]
-
-/* ── Enrollment Trends (monthly) ── */
-const enrollmentTrends = [
-  { month: 'Jan', enrollments: 180 },
-  { month: 'Feb', enrollments: 210 },
-  { month: 'Mar', enrollments: 195 },
-  { month: 'Apr', enrollments: 240 },
-  { month: 'May', enrollments: 310 },
-  { month: 'Jun', enrollments: 420 },
-  { month: 'Jul', enrollments: 380 },
-  { month: 'Aug', enrollments: 290 },
-  { month: 'Sep', enrollments: 260 },
-  { month: 'Oct', enrollments: 230 },
-  { month: 'Nov', enrollments: 200 },
-  { month: 'Dec', enrollments: 175 },
-]
-
-/* ── Students by Department ── */
-const studentsByDept = [
-  { dept: 'CS', students: 310 },
-  { dept: 'ME', students: 275 },
-  { dept: 'ECE', students: 260 },
-  { dept: 'CE', students: 198 },
-  { dept: 'MBA', students: 180 },
-  { dept: 'PHY', students: 142 },
-  { dept: 'MATH', students: 120 },
-  { dept: 'CHEM', students: 105 },
-]
-
-/* ── Revenue Overview (monthly) ── */
-const revenueData = [
-  { month: 'Jan', revenue: 42, expenses: 28 },
-  { month: 'Feb', revenue: 38, expenses: 26 },
-  { month: 'Mar', revenue: 45, expenses: 30 },
-  { month: 'Apr', revenue: 50, expenses: 32 },
-  { month: 'May', revenue: 35, expenses: 29 },
-  { month: 'Jun', revenue: 58, expenses: 35 },
-  { month: 'Jul', revenue: 62, expenses: 38 },
-  { month: 'Aug', revenue: 48, expenses: 33 },
-  { month: 'Sep', revenue: 44, expenses: 31 },
-  { month: 'Oct', revenue: 40, expenses: 27 },
-  { month: 'Nov', revenue: 36, expenses: 25 },
-  { month: 'Dec', revenue: 30, expenses: 22 },
-]
+import apiClient from '../../services/apiClient'
 
 export default function SuperAdminReportsPage() {
+  const [report, setReport] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get('/reports/admin')
+      .then(res => { if (!cancelled) setReport(res.data) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  const stats = [
+    { id: 'report-enrollments',  icon: 'school',          label: 'Total Enrollments',  value: report?.totalEnrollments  ?? '—', delta: '', variant: 'primary'   },
+    { id: 'report-active-users', icon: 'group',           label: 'Active Users',        value: report?.activeUsers       ?? '—', delta: '', variant: 'success'   },
+    { id: 'report-revenue',      icon: 'payments',        label: 'Revenue Collected',   value: report?.revenueCollected  ?? '—', delta: '', variant: 'secondary' },
+    { id: 'report-attendance',   icon: 'event_available', label: 'Avg Attendance',      value: report?.avgAttendance     ?? '—', delta: '', variant: 'tertiary'  },
+  ]
+
+  const enrollmentTrends = report?.enrollmentTrends ?? []
+  const studentsByDept   = report?.studentsByDepartment ?? []
+  const revenueData      = report?.revenueData ?? []
+
+  const noData = <p style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--color-text-muted)' }}>No data available yet. Backend implementation pending.</p>
+
   return (
     <DashboardLayout>
       <div id="super-admin-reports-page">
@@ -95,6 +71,7 @@ export default function SuperAdminReportsPage() {
               <span className="material-symbols-rounded">trending_up</span>
               <h2>Enrollment Trends</h2>
             </div>
+            {enrollmentTrends.length === 0 ? noData : (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={enrollmentTrends} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e8e0db" />
@@ -114,6 +91,7 @@ export default function SuperAdminReportsPage() {
                 />
               </LineChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Students by Department */}
@@ -122,6 +100,7 @@ export default function SuperAdminReportsPage() {
               <span className="material-symbols-rounded">bar_chart</span>
               <h2>Students by Department</h2>
             </div>
+            {studentsByDept.length === 0 ? noData : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={studentsByDept} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e8e0db" />
@@ -138,6 +117,7 @@ export default function SuperAdminReportsPage() {
                 />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -147,6 +127,7 @@ export default function SuperAdminReportsPage() {
             <span className="material-symbols-rounded">account_balance</span>
             <h2>Revenue Overview</h2>
           </div>
+          {revenueData.length === 0 ? noData : (
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={revenueData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e8e0db" />
@@ -177,6 +158,7 @@ export default function SuperAdminReportsPage() {
               />
             </LineChart>
           </ResponsiveContainer>
+          )}
         </div>
       </div>
     </DashboardLayout>
