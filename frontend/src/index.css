@@ -368,3 +368,9 @@ img {
   background: var(--color-primary-fixed);
   color: var(--color-primary);
 }
+
+/* ── Utility Animations ── */
+@keyframes spin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}

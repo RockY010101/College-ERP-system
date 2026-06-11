@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════════════════════
 // SuperAdminUsersPage.jsx — User Management for Super Admin
-// Data: fetched from /api/employees (all staff) + /api/students
+// Data: GET/POST /api/users
 // ══════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -11,108 +11,172 @@ import Modal from '../../components/Modal'
 import EmptyState from '../../components/EmptyState'
 import apiClient from '../../services/apiClient'
 
-/* ── Removed hardcoded usersData — now fetched from API ── */
-const usersData_UNUSED = [
-  { id: 'usr-1', firstName: 'Aarav', lastName: 'Sharma', email: 'aarav.sharma@nitk.edu.in', role: 'Super Admin', department: 'Administration', status: 'Active', lastLogin: '29 May 2026, 11:42 PM' },
-  { id: 'usr-2', firstName: 'Priya', lastName: 'Patel', email: 'priya.patel@nitk.edu.in', role: 'Admin', department: 'Computer Science', status: 'Active', lastLogin: '29 May 2026, 10:18 PM' },
-  { id: 'usr-3', firstName: 'Rajesh', lastName: 'Kumar', email: 'rajesh.kumar@nitk.edu.in', role: 'Faculty', department: 'Mechanical Engg', status: 'Active', lastLogin: '29 May 2026, 09:05 PM' },
-  { id: 'usr-4', firstName: 'Sneha', lastName: 'Iyer', email: 'sneha.iyer@nitk.edu.in', role: 'Faculty', department: 'ECE', status: 'Active', lastLogin: '28 May 2026, 04:30 PM' },
-  { id: 'usr-5', firstName: 'Vikram', lastName: 'Deshmukh', email: 'vikram.deshmukh@nitk.edu.in', role: 'Accountant', department: 'Finance', status: 'Active', lastLogin: '29 May 2026, 06:12 PM' },
-  { id: 'usr-6', firstName: 'Ananya', lastName: 'Reddy', email: 'ananya.reddy@nitk.edu.in', role: 'Student', department: 'Computer Science', status: 'Active', lastLogin: '29 May 2026, 08:55 PM' },
-  { id: 'usr-7', firstName: 'Karthik', lastName: 'Nair', email: 'karthik.nair@nitk.edu.in', role: 'Student', department: 'Civil Engg', status: 'Inactive', lastLogin: '15 Apr 2026, 02:10 PM' },
-  { id: 'usr-8', firstName: 'Meera', lastName: 'Joshi', email: 'meera.joshi@nitk.edu.in', role: 'Faculty', department: 'Physics', status: 'Active', lastLogin: '28 May 2026, 11:20 AM' },
-  { id: 'usr-9', firstName: 'Arjun', lastName: 'Menon', email: 'arjun.menon@nitk.edu.in', role: 'Student', department: 'MBA', status: 'Suspended', lastLogin: '10 Mar 2026, 09:45 AM' },
-  { id: 'usr-10', firstName: 'Divya', lastName: 'Gupta', email: 'divya.gupta@nitk.edu.in', role: 'Admin', department: 'ECE', status: 'Active', lastLogin: '29 May 2026, 07:30 PM' },
-]
-
+/* ── Static filter options ── */
 const roleOptions = [
   { value: '', label: 'All Roles' },
-  { value: 'Super Admin', label: 'Super Admin' },
-  { value: 'Admin', label: 'Admin' },
-  { value: 'Faculty', label: 'Faculty' },
-  { value: 'Accountant', label: 'Accountant' },
-  { value: 'Student', label: 'Student' },
+  { value: 'SUPER_ADMIN', label: 'Super Admin' },
+  { value: 'ADMIN',       label: 'Admin' },
+  { value: 'FACULTY',     label: 'Faculty' },
+  { value: 'ACCOUNTANT',  label: 'Accountant' },
+  { value: 'STUDENT',     label: 'Student' },
 ]
 
 const statusOptions = [
-  { value: '', label: 'All Status' },
-  { value: 'Active', label: 'Active' },
-  { value: 'Inactive', label: 'Inactive' },
-  { value: 'Suspended', label: 'Suspended' },
+  { value: '',         label: 'All Status'  },
+  { value: 'ACTIVE',   label: 'Active'      },
+  { value: 'INACTIVE', label: 'Inactive'    },
+  { value: 'SUSPENDED',label: 'Suspended'   },
 ]
 
-const departmentList = [
-  'Administration', 'Computer Science', 'Mechanical Engg', 'ECE',
-  'Civil Engg', 'MBA', 'Physics', 'Mathematics', 'Chemistry', 'Finance',
-]
-
+/* ── Chip helpers ── */
 const roleChipClass = (role) => {
   switch (role) {
-    case 'Super Admin': return 'chip chip--primary'
-    case 'Admin':       return 'chip chip--secondary'
-    case 'Faculty':     return 'chip chip--neutral'
-    case 'Accountant':  return 'chip chip--neutral'
-    case 'Student':     return 'chip chip--neutral'
-    default:            return 'chip'
+    case 'SUPER_ADMIN': return 'chip chip--primary'
+    case 'ADMIN':       return 'chip chip--secondary'
+    default:            return 'chip chip--neutral'
+  }
+}
+const roleLabel = (role) => {
+  switch (role) {
+    case 'SUPER_ADMIN': return 'Super Admin'
+    case 'ADMIN':       return 'Admin'
+    case 'FACULTY':     return 'Faculty'
+    case 'ACCOUNTANT':  return 'Accountant'
+    case 'STUDENT':     return 'Student'
+    default:            return role ?? '—'
+  }
+}
+const statusChipClass = (status) => {
+  switch (status) {
+    case 'ACTIVE':    return 'chip chip--success'
+    case 'INACTIVE':  return 'chip chip--error'
+    case 'SUSPENDED': return 'chip chip--error'
+    default:          return 'chip chip--neutral'
   }
 }
 
-const statusChipClass = (status) => {
-  switch (status) {
-    case 'Active':    return 'chip chip--success'
-    case 'Inactive':  return 'chip chip--error'
-    case 'Suspended': return 'chip chip--error'
-    default:          return 'chip'
-  }
+/* ── Empty form state ── */
+const emptyForm = {
+  firstName:  '',
+  lastName:   '',
+  email:      '',
+  role:       '',
+  department: '',
+  password:   '',
+  phone:      '',
 }
 
 export default function SuperAdminUsersPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [usersData, setUsersData] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [users, setUsers]           = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(null)
 
-  /* ── Fetch users from API ── */
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      setLoading(true)
-      try {
-        // Fetch both employees and students, merge into one list
-        const [empRes, stuRes] = await Promise.allSettled([
-          apiClient.get('/employees'),
-          apiClient.get('/students'),
-        ])
-        const employees = empRes.status === 'fulfilled' && Array.isArray(empRes.value.data) ? empRes.value.data : []
-        const students  = stuRes.status === 'fulfilled' && Array.isArray(stuRes.value.data) ? stuRes.value.data : []
-        if (!cancelled) setUsersData([...employees, ...students])
-      } catch (err) {
-        if (!cancelled) setError('Failed to load users')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+  // Filters
+  const [searchQuery, setSearchQuery]   = useState('')
+  const [roleFilter, setRoleFilter]     = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  // Modal
+  const [showModal, setShowModal]       = useState(false)
+  const [form, setForm]                 = useState(emptyForm)
+  const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting]     = useState(false)
+  const [formError, setFormError]       = useState(null)
+  const [formSuccess, setFormSuccess]   = useState(null)
+
+  /* ── Fetch users ── */
+  const loadUsers = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await apiClient.get('/users')
+      setUsers(Array.isArray(res.data) ? res.data : [])
+    } catch {
+      setError('Failed to load users from server.')
+    } finally {
+      setLoading(false)
     }
-    load()
-    return () => { cancelled = true }
-  }, [])
+  }
+
+  useEffect(() => { loadUsers() }, [])
 
   /* ── Filter logic ── */
   const filteredUsers = useMemo(() => {
-    return usersData.filter((u) => {
-      const fullName = `${u.firstName} ${u.lastName}`.toLowerCase()
-      const matchesSearch =
-        !searchQuery ||
-        fullName.includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.department.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesRole = !roleFilter || u.role === roleFilter
-      const matchesStatus = !statusFilter || u.status === statusFilter
-      return matchesSearch && matchesRole && matchesStatus
+    return users.filter((u) => {
+      const name  = (u.name ?? '').toLowerCase()
+      const email = (u.email ?? '').toLowerCase()
+      const q     = searchQuery.toLowerCase()
+      if (searchQuery && !name.includes(q) && !email.includes(q)) return false
+      if (roleFilter   && u.role   !== roleFilter)   return false
+      if (statusFilter && u.status !== statusFilter) return false
+      return true
     })
-  }, [searchQuery, roleFilter, statusFilter])
+  }, [users, searchQuery, roleFilter, statusFilter])
+
+  /* ── Handle form changes ── */
+  const handleChange = (e) => {
+    const { id, value } = e.target
+    setForm(prev => ({ ...prev, [id.replace('add-', '')]: value }))
+  }
+
+  /* ── Submit create user ── */
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setFormError(null)
+    setFormSuccess(null)
+
+    if (form.password.length < 8) {
+      setFormError('Password must be at least 8 characters.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await apiClient.post('/users', {
+        firstName:  form.firstName,
+        lastName:   form.lastName,
+        email:      form.email,
+        password:   form.password,
+        role:       form.role,
+        department: form.department,
+        phone:      form.phone,
+      })
+      setFormSuccess(`User "${form.firstName} ${form.lastName}" created successfully!`)
+      setForm(emptyForm)
+      // Refresh user list
+      await loadUsers()
+      // Auto-close after 1.5s
+      setTimeout(() => {
+        setShowModal(false)
+        setFormSuccess(null)
+      }, 1500)
+    } catch (err) {
+      const msg = err?.response?.data?.error ?? err?.message ?? 'Failed to create user.'
+      setFormError(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  /* ── Close modal ── */
+  const handleCloseModal = () => {
+    setShowModal(false)
+    setForm(emptyForm)
+    setFormError(null)
+    setFormSuccess(null)
+    setShowPassword(false)
+  }
+
+  /* ── Delete user ── */
+  const handleDelete = async (userId, userName) => {
+    if (!window.confirm(`Delete user "${userName}"? This also removes their Firebase login.`)) return
+    try {
+      await apiClient.delete(`/users/${userId}`)
+      await loadUsers()
+    } catch (err) {
+      alert('Failed to delete user: ' + (err?.response?.data?.error ?? err.message))
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -125,31 +189,10 @@ export default function SuperAdminUsersPage() {
 
         {/* ── Toolbar ── */}
         <div className="toolbar" id="users-toolbar">
-          <SearchBar
-            placeholder="Search users…"
-            value={searchQuery}
-            onChange={setSearchQuery}
-            id="users-search"
-          />
-          <FilterDropdown
-            label="Role"
-            options={roleOptions}
-            value={roleFilter}
-            onChange={setRoleFilter}
-            id="users-role-filter"
-          />
-          <FilterDropdown
-            label="Status"
-            options={statusOptions}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            id="users-status-filter"
-          />
-          <button
-            className="btn btn-primary"
-            id="add-user-btn"
-            onClick={() => setShowModal(true)}
-          >
+          <SearchBar placeholder="Search users…" value={searchQuery} onChange={setSearchQuery} id="users-search" />
+          <FilterDropdown label="Role" options={roleOptions} value={roleFilter} onChange={setRoleFilter} id="users-role-filter" />
+          <FilterDropdown label="Status" options={statusOptions} value={statusFilter} onChange={setStatusFilter} id="users-status-filter" />
+          <button className="btn btn-primary" id="add-user-btn" onClick={() => setShowModal(true)}>
             <span className="material-symbols-rounded">person_add</span>
             Add User
           </button>
@@ -162,12 +205,7 @@ export default function SuperAdminUsersPage() {
           ) : error ? (
             <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-error)' }}>{error}</p>
           ) : filteredUsers.length === 0 ? (
-            <EmptyState
-              icon="person_off"
-              title="No users found"
-              message="No users returned from the server yet."
-              id="users-empty"
-            />
+            <EmptyState icon="person_off" title="No users found" message="No users returned from the server yet." id="users-empty" />
           ) : (
             <table className="data-table" id="users-data-table">
               <thead>
@@ -175,33 +213,29 @@ export default function SuperAdminUsersPage() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Role</th>
-                  <th>Department</th>
                   <th>Status</th>
-                  <th>Last Login</th>
+                  <th>Created</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} id={user.id}>
-                    <td style={{ fontWeight: 600 }}>
-                      {user.firstName} {user.lastName}
+                {filteredUsers.map((user, i) => (
+                  <tr key={user.id ?? i} id={`user-row-${user.id ?? i}`}>
+                    <td style={{ fontWeight: 600 }}>{user.name ?? '—'}</td>
+                    <td>{user.email ?? '—'}</td>
+                    <td><span className={roleChipClass(user.role)}>{roleLabel(user.role)}</span></td>
+                    <td><span className={statusChipClass(user.status)}>{user.status ?? '—'}</span></td>
+                    <td style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN') : '—'}
                     </td>
-                    <td>{user.email}</td>
-                    <td>
-                      <span className={roleChipClass(user.role)}>{user.role}</span>
-                    </td>
-                    <td>{user.department}</td>
-                    <td>
-                      <span className={statusChipClass(user.status)}>{user.status}</span>
-                    </td>
-                    <td>{user.lastLogin}</td>
                     <td>
                       <div className="actions-cell">
-                        <button className="btn-icon" title="Edit user" id={`edit-${user.id}`}>
-                          <span className="material-symbols-rounded">edit</span>
-                        </button>
-                        <button className="btn-icon btn-icon--danger" title="Delete user" id={`delete-${user.id}`}>
+                        <button
+                          className="btn-icon btn-icon--danger"
+                          title="Delete user"
+                          id={`delete-user-${user.id}`}
+                          onClick={() => handleDelete(user.id, user.name)}
+                        >
                           <span className="material-symbols-rounded">delete</span>
                         </button>
                       </div>
@@ -214,54 +248,156 @@ export default function SuperAdminUsersPage() {
         </div>
 
         {/* ── Add User Modal ── */}
-        <Modal
-          open={showModal}
-          onClose={() => setShowModal(false)}
-          title="Add New User"
-          id="add-user-modal"
-        >
-          <form onSubmit={(e) => { e.preventDefault(); setShowModal(false) }}>
+        <Modal open={showModal} onClose={handleCloseModal} title="Add New User" id="add-user-modal">
+          <form onSubmit={handleSubmit} autoComplete="off">
             <div className="form-grid">
+              {/* First / Last Name */}
               <div className="form-group">
-                <label htmlFor="add-first-name">First Name</label>
-                <input type="text" id="add-first-name" placeholder="Enter first name" required />
+                <label htmlFor="add-firstName">First Name</label>
+                <input
+                  type="text"
+                  id="add-firstName"
+                  placeholder="Enter first name"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  required
+                />
               </div>
               <div className="form-group">
-                <label htmlFor="add-last-name">Last Name</label>
-                <input type="text" id="add-last-name" placeholder="Enter last name" required />
+                <label htmlFor="add-lastName">Last Name</label>
+                <input
+                  type="text"
+                  id="add-lastName"
+                  placeholder="Enter last name"
+                  value={form.lastName}
+                  onChange={handleChange}
+                  required
+                />
               </div>
+
+              {/* Email */}
               <div className="form-group form-group--full">
                 <label htmlFor="add-email">Email Address</label>
-                <input type="email" id="add-email" placeholder="user@nitk.edu.in" required />
+                <input
+                  type="email"
+                  id="add-email"
+                  placeholder="user@college.edu.in"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                />
               </div>
+
+              {/* Role */}
               <div className="form-group">
                 <label htmlFor="add-role">Role</label>
-                <select id="add-role" required>
+                <select id="add-role" value={form.role} onChange={handleChange} required>
                   <option value="">Select role</option>
-                  <option value="Super Admin">Super Admin</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Faculty">Faculty</option>
-                  <option value="Accountant">Accountant</option>
-                  <option value="Student">Student</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="FACULTY">Faculty</option>
+                  <option value="ACCOUNTANT">Accountant</option>
+                  <option value="STUDENT">Student</option>
                 </select>
               </div>
+
+              {/* Department */}
               <div className="form-group">
                 <label htmlFor="add-department">Department</label>
-                <select id="add-department" required>
-                  <option value="">Select department</option>
-                  {departmentList.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  id="add-department"
+                  placeholder="e.g. Computer Science"
+                  value={form.department}
+                  onChange={handleChange}
+                />
               </div>
+
+              {/* Phone (optional) */}
               <div className="form-group form-group--full">
+                <label htmlFor="add-phone">Phone (optional)</label>
+                <input
+                  type="tel"
+                  id="add-phone"
+                  placeholder="e.g. +91 98765 43210"
+                  value={form.phone}
+                  onChange={handleChange}
+                />
+              </div>
+
+              {/* Password */}
+              <div className="form-group form-group--full" style={{ position: 'relative' }}>
                 <label htmlFor="add-password">Password</label>
-                <input type="password" id="add-password" placeholder="Minimum 8 characters" required />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="add-password"
+                    placeholder="Minimum 8 characters"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    style={{ paddingRight: '2.75rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    style={{
+                      position: 'absolute', right: '0.75rem', top: '50%',
+                      transform: 'translateY(-50%)', background: 'none',
+                      border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)',
+                      display: 'flex', alignItems: 'center'
+                    }}
+                    tabIndex={-1}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <span className="material-symbols-rounded" style={{ fontSize: '1.1rem' }}>
+                      {showPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+                <small style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', marginTop: '0.25rem', display: 'block' }}>
+                  This password will be used by the user to log in.
+                </small>
               </div>
             </div>
+
+            {/* Feedback */}
+            {formError && (
+              <div style={{
+                marginTop: '0.75rem', padding: '0.75rem 1rem', borderRadius: 8,
+                background: '#ffdad6', color: '#ba1a1a', fontSize: '0.875rem'
+              }} id="add-user-error">
+                <span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle', marginRight: 6 }}>error</span>
+                {formError}
+              </div>
+            )}
+            {formSuccess && (
+              <div style={{
+                marginTop: '0.75rem', padding: '0.75rem 1rem', borderRadius: 8,
+                background: '#e8f5e9', color: '#2e7d32', fontSize: '0.875rem'
+              }} id="add-user-success">
+                <span className="material-symbols-rounded" style={{ fontSize: '1rem', verticalAlign: 'middle', marginRight: 6 }}>check_circle</span>
+                {formSuccess}
+              </div>
+            )}
+
             <div className="form-actions">
-              <button type="button" className="btn" onClick={() => setShowModal(false)}>Cancel</button>
-              <button type="submit" className="btn btn-primary">Create User</button>
+              <button type="button" className="btn" onClick={handleCloseModal} disabled={submitting}>Cancel</button>
+              <button type="submit" className="btn btn-primary" id="create-user-btn" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <span className="material-symbols-rounded" style={{ animation: 'spin 1s linear infinite', fontSize: '1rem' }}>sync</span>
+                    Creating…
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-rounded">person_add</span>
+                    Create User
+                  </>
+                )}
+              </button>
             </div>
           </form>
         </Modal>
