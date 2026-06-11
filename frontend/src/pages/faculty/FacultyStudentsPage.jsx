@@ -1,53 +1,14 @@
 // ══════════════════════════════════════════════════════════════════════
-// FacultyStudentsPage.jsx — My Students listing with filters & stats
+// FacultyStudentsPage.jsx — My Students listing
+// Data: GET /api/faculty/students
 // ══════════════════════════════════════════════════════════════════════
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import SearchBar from '../../components/SearchBar'
 import FilterDropdown from '../../components/FilterDropdown'
 import EmptyState from '../../components/EmptyState'
-
-/* ── Static Data ─────────────────────────────────────────────────── */
-
-const stats = [
-  { id: 'total-students',      label: 'Total Students',       value: '156',   icon: 'groups',       variant: 'primary'  },
-  { id: 'avg-attendance',      label: 'Avg Attendance',       value: '87.3%', icon: 'trending_up',  variant: 'success'  },
-  { id: 'pending-evaluations', label: 'Pending Evaluations',  value: '23',    icon: 'rate_review',  variant: 'tertiary' },
-]
-
-const subjectOptions = [
-  { value: '',   label: 'All Subjects' },
-  { value: 'DS', label: 'Data Structures' },
-  { value: 'OS', label: 'Operating Systems' },
-  { value: 'DB', label: 'DBMS' },
-  { value: 'CN', label: 'Computer Networks' },
-]
-
-const semesterOptions = [
-  { value: '',  label: 'All Semesters' },
-  { value: '3', label: 'Semester 3' },
-  { value: '4', label: 'Semester 4' },
-  { value: '5', label: 'Semester 5' },
-  { value: '6', label: 'Semester 6' },
-]
-
-const students = [
-  { id: 's1',  rollNo: 'CS21001', name: 'Ananya Sharma',      subject: 'Data Structures',    subjectKey: 'DS', semester: '3', attendance: 92,  marks: 34 },
-  { id: 's2',  rollNo: 'CS21015', name: 'Rohan Mehta',        subject: 'Data Structures',    subjectKey: 'DS', semester: '3', attendance: 78,  marks: 28 },
-  { id: 's3',  rollNo: 'CS21023', name: 'Priya Patel',        subject: 'Operating Systems',  subjectKey: 'OS', semester: '5', attendance: 88,  marks: 36 },
-  { id: 's4',  rollNo: 'CS21008', name: 'Arjun Nair',         subject: 'DBMS',               subjectKey: 'DB', semester: '4', attendance: 71,  marks: 25 },
-  { id: 's5',  rollNo: 'CS21037', name: 'Sneha Kulkarni',     subject: 'Computer Networks',  subjectKey: 'CN', semester: '6', attendance: 95,  marks: 38 },
-  { id: 's6',  rollNo: 'CS21042', name: 'Vikram Desai',       subject: 'Data Structures',    subjectKey: 'DS', semester: '3', attendance: 83,  marks: 31 },
-  { id: 's7',  rollNo: 'CS21019', name: 'Kavya Reddy',        subject: 'Operating Systems',  subjectKey: 'OS', semester: '5', attendance: 90,  marks: 35 },
-  { id: 's8',  rollNo: 'CS21055', name: 'Amit Joshi',         subject: 'DBMS',               subjectKey: 'DB', semester: '4', attendance: 67,  marks: 22 },
-  { id: 's9',  rollNo: 'CS21011', name: 'Neha Gupta',         subject: 'Computer Networks',  subjectKey: 'CN', semester: '6', attendance: 86,  marks: 33 },
-  { id: 's10', rollNo: 'CS21028', name: 'Rahul Verma',        subject: 'Data Structures',    subjectKey: 'DS', semester: '3', attendance: 74,  marks: 26 },
-  { id: 's11', rollNo: 'CS21033', name: 'Deepika Iyer',       subject: 'Operating Systems',  subjectKey: 'OS', semester: '5', attendance: 91,  marks: 37 },
-  { id: 's12', rollNo: 'CS21047', name: 'Siddharth Menon',    subject: 'DBMS',               subjectKey: 'DB', semester: '4', attendance: 80,  marks: 29 },
-]
-
-/* ── Helpers ──────────────────────────────────────────────────────── */
+import apiClient from '../../services/apiClient'
 
 function attendanceColor(pct) {
   if (pct >= 85) return '#2e7d32'
@@ -55,25 +16,64 @@ function attendanceColor(pct) {
   return '#ba1a1a'
 }
 
-/* ── Component ───────────────────────────────────────────────────── */
+const semesterOptions = [
+  { value: '', label: 'All Semesters' },
+  ...Array.from({ length: 8 }, (_, i) => ({ value: String(i + 1), label: `Semester ${i + 1}` })),
+]
 
 export default function FacultyStudentsPage() {
-  const [search, setSearch] = useState('')
+  const [students, setStudents]         = useState([])
+  const [summary, setSummary]           = useState(null)
+  const [loading, setLoading]           = useState(true)
+  const [search, setSearch]             = useState('')
   const [subjectFilter, setSubjectFilter] = useState('')
-  const [semFilter, setSemFilter] = useState('')
+  const [semFilter, setSemFilter]       = useState('')
 
-  const filtered = students.filter((s) => {
-    const matchesSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.rollNo.toLowerCase().includes(search.toLowerCase())
-    const matchesSubject = !subjectFilter || s.subjectKey === subjectFilter
-    const matchesSem = !semFilter || s.semester === semFilter
-    return matchesSearch && matchesSubject && matchesSem
-  })
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get('/faculty/students')
+      .then(res => {
+        if (!cancelled) {
+          const d = res.data
+          if (Array.isArray(d)) {
+            setStudents(d)
+          } else if (d && typeof d === 'object') {
+            setStudents(Array.isArray(d.students) ? d.students : [])
+            setSummary(d.summary ?? null)
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Build subject options dynamically
+  const subjectOptions = useMemo(() => {
+    const subs = [...new Set(students.map(s => s.subject ?? s.subjectName).filter(Boolean))]
+    return [{ value: '', label: 'All Subjects' }, ...subs.map(s => ({ value: s, label: s }))]
+  }, [students])
+
+  const filtered = useMemo(() => {
+    return students.filter((s) => {
+      const q = search.toLowerCase()
+      const name = (s.name ?? `${s.firstName ?? ''} ${s.lastName ?? ''}`).toLowerCase()
+      const roll = (s.rollNo ?? s.rollNumber ?? '').toLowerCase()
+      const matchesSearch  = !q || name.includes(q) || roll.includes(q)
+      const matchesSubject = !subjectFilter || (s.subject ?? s.subjectName) === subjectFilter
+      const matchesSem     = !semFilter || String(s.semester) === semFilter
+      return matchesSearch && matchesSubject && matchesSem
+    })
+  }, [students, search, subjectFilter, semFilter])
+
+  const stats = [
+    { id: 'total-students',      label: 'Total Students',      value: summary?.totalStudents    ?? students.length, icon: 'groups',      variant: 'primary'  },
+    { id: 'avg-attendance',      label: 'Avg Attendance',      value: summary?.avgAttendance    ?? '—',             icon: 'trending_up', variant: 'success'  },
+    { id: 'pending-evaluations', label: 'Pending Evaluations', value: summary?.pendingEvals     ?? '—',             icon: 'rate_review', variant: 'tertiary' },
+  ]
 
   return (
     <DashboardLayout>
-      {/* ── Page Header ── */}
       <div className="page-header" id="faculty-students-header">
         <h1>My Students</h1>
         <p>View and manage students across your assigned subjects</p>
@@ -96,26 +96,9 @@ export default function FacultyStudentsPage() {
 
       {/* ── Toolbar ── */}
       <div className="toolbar" id="students-toolbar">
-        <SearchBar
-          placeholder="Search by name or roll no…"
-          value={search}
-          onChange={setSearch}
-          id="students-search"
-        />
-        <FilterDropdown
-          label="Subject"
-          options={subjectOptions}
-          value={subjectFilter}
-          onChange={setSubjectFilter}
-          id="students-subject-filter"
-        />
-        <FilterDropdown
-          label="Semester"
-          options={semesterOptions}
-          value={semFilter}
-          onChange={setSemFilter}
-          id="students-semester-filter"
-        />
+        <SearchBar placeholder="Search by name or roll no…" value={search} onChange={setSearch} id="students-search" />
+        <FilterDropdown label="Subject" options={subjectOptions} value={subjectFilter} onChange={setSubjectFilter} id="students-subject-filter" />
+        <FilterDropdown label="Semester" options={semesterOptions} value={semFilter} onChange={setSemFilter} id="students-semester-filter" />
       </div>
 
       {/* ── Students Table ── */}
@@ -128,13 +111,10 @@ export default function FacultyStudentsPage() {
           </span>
         </div>
 
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon="search_off"
-            title="No students found"
-            message="Try adjusting your search or filter criteria."
-            id="students-empty"
-          />
+        {loading ? (
+          <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading students…</p>
+        ) : filtered.length === 0 ? (
+          <EmptyState icon="search_off" title="No students found" message="No student records available yet." id="students-empty" />
         ) : (
           <table className="data-table" id="students-data-table">
             <thead>
@@ -149,27 +129,30 @@ export default function FacultyStudentsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s) => (
-                <tr key={s.id} id={s.id}>
-                  <td>{s.rollNo}</td>
-                  <td>{s.name}</td>
-                  <td>{s.subject}</td>
-                  <td><span className="chip chip--neutral">Sem {s.semester}</span></td>
-                  <td>
-                    <span style={{ fontWeight: 600, color: attendanceColor(s.attendance) }}>
-                      {s.attendance}%
-                    </span>
-                  </td>
-                  <td>{s.marks} / 40</td>
-                  <td>
-                    <div className="actions-cell">
-                      <button className="btn-icon" title="View Student" id={`view-${s.id}`}>
-                        <span className="material-symbols-rounded">visibility</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((s, i) => {
+                const att = s.attendance ?? s.attendancePercent ?? null
+                return (
+                  <tr key={s.studentId ?? s.id ?? i} id={`fstud-${s.studentId ?? i}`}>
+                    <td>{s.rollNo ?? s.rollNumber ?? '—'}</td>
+                    <td>{s.name ?? `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim()}</td>
+                    <td>{s.subject ?? s.subjectName ?? '—'}</td>
+                    <td><span className="chip chip--neutral">{s.semester ? `Sem ${s.semester}` : '—'}</span></td>
+                    <td>
+                      {att !== null ? (
+                        <span style={{ fontWeight: 600, color: attendanceColor(att) }}>{att}%</span>
+                      ) : '—'}
+                    </td>
+                    <td>{s.marks ?? s.internalMarks !== undefined ? `${s.marks ?? s.internalMarks} / 40` : '—'}</td>
+                    <td>
+                      <div className="actions-cell">
+                        <button className="btn-icon" title="View Student" id={`view-fstud-${s.studentId ?? i}`}>
+                          <span className="material-symbols-rounded">visibility</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
