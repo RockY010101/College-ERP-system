@@ -1,29 +1,43 @@
 package com.collegeerp.controller;
 
+import com.collegeerp.model.Attendance;
+import com.collegeerp.service.AttendanceService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
+
+import java.util.List;
 
 /**
  * AttendanceController — endpoints for attendance management.
- * TODO (Phase 7): Full implementation.
+ * GET    /api/attendance
+ * GET    /api/attendance/student/{id}
+ * POST   /api/attendance
  */
 @RestController
 @RequestMapping("/api/attendance")
+@RequiredArgsConstructor
 public class AttendanceController {
 
-    @GetMapping
-    public ResponseEntity<?> getAll() {
-        return ResponseEntity.ok(Map.of("message", "GET /attendance — Phase 7"));
-    }
+    private final AttendanceService attendanceService;
 
-    @PostMapping
-    public ResponseEntity<?> mark(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "POST /attendance — Phase 7"));
+    @GetMapping
+    public ResponseEntity<List<Attendance>> getAll() {
+        return ResponseEntity.ok(attendanceService.findAll());
     }
 
     @GetMapping("/student/{id}")
-    public ResponseEntity<?> getByStudent(@PathVariable Long id) {
-        return ResponseEntity.ok(Map.of("message", "GET /attendance/student/" + id + " — Phase 7"));
+    public ResponseEntity<List<Attendance>> getByStudent(@PathVariable Long id) {
+        return ResponseEntity.ok(attendanceService.findByStudentId(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<Attendance> mark(@RequestBody Attendance attendance) {
+        return ResponseEntity.ok(attendanceService.mark(attendance));
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Attendance>> markBulk(@RequestBody List<Attendance> records) {
+        return ResponseEntity.ok(attendanceService.saveAll(records));
     }
 }

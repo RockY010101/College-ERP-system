@@ -1,8 +1,12 @@
 package com.collegeerp.controller;
 
+import com.collegeerp.model.Student;
+import com.collegeerp.service.StudentService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
+
+import java.util.List;
 
 /**
  * StudentController — CRUD endpoints for student management.
@@ -11,35 +15,37 @@ import java.util.Map;
  * POST   /api/students
  * PUT    /api/students/{id}
  * DELETE /api/students/{id}
- *
- * TODO (Phase 4): Full implementation with StudentService.
  */
 @RestController
 @RequestMapping("/api/students")
+@RequiredArgsConstructor
 public class StudentController {
 
+    private final StudentService studentService;
+
     @GetMapping
-    public ResponseEntity<?> getAll() {
-        return ResponseEntity.ok(Map.of("message", "GET /students — Phase 4"));
+    public ResponseEntity<List<Student>> getAll() {
+        return ResponseEntity.ok(studentService.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(Map.of("message", "GET /students/" + id + " — Phase 4"));
+    public ResponseEntity<Student> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(studentService.findById(id));
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "POST /students — Phase 4"));
+    public ResponseEntity<Student> create(@RequestBody Student student) {
+        return ResponseEntity.ok(studentService.create(student));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "PUT /students/" + id + " — Phase 4"));
+    public ResponseEntity<Student> update(@PathVariable Long id, @RequestBody Student student) {
+        return ResponseEntity.ok(studentService.update(id, student));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
-        return ResponseEntity.ok(Map.of("message", "DELETE /students/" + id + " — Phase 4"));
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        studentService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

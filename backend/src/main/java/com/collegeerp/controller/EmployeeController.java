@@ -1,34 +1,50 @@
 package com.collegeerp.controller;
 
+import com.collegeerp.model.Employee;
+import com.collegeerp.service.EmployeeService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
+
+import java.util.List;
 
 /**
  * EmployeeController — CRUD endpoints for employee management.
- * TODO (Phase 5): Full implementation.
+ * GET    /api/employees
+ * POST   /api/employees
+ * PUT    /api/employees/{id}
+ * DELETE /api/employees/{id}
  */
 @RestController
 @RequestMapping("/api/employees")
+@RequiredArgsConstructor
 public class EmployeeController {
 
+    private final EmployeeService employeeService;
+
     @GetMapping
-    public ResponseEntity<?> getAll() {
-        return ResponseEntity.ok(Map.of("message", "GET /employees — Phase 5"));
+    public ResponseEntity<List<Employee>> getAll() {
+        return ResponseEntity.ok(employeeService.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Employee> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.findById(id));
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "POST /employees — Phase 5"));
+    public ResponseEntity<Employee> create(@RequestBody Employee employee) {
+        return ResponseEntity.ok(employeeService.create(employee));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "PUT /employees/" + id + " — Phase 5"));
+    public ResponseEntity<Employee> update(@PathVariable Long id, @RequestBody Employee employee) {
+        return ResponseEntity.ok(employeeService.update(id, employee));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
-        return ResponseEntity.ok(Map.of("message", "DELETE /employees/" + id + " — Phase 5"));
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        employeeService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

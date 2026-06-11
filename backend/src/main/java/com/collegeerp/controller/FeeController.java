@@ -1,39 +1,66 @@
 package com.collegeerp.controller;
 
+import com.collegeerp.model.Fee;
+import com.collegeerp.model.Payment;
+import com.collegeerp.service.FeeService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
+
+import java.util.List;
 
 /**
- * FeeController — endpoints for fee and payment management.
- * TODO (Phase 8): Full implementation.
+ * FeeController — endpoints for fee structure and payment management.
+ * GET  /api/fees
+ * POST /api/fees
+ * PUT  /api/fees/{id}
+ * GET  /api/payments
+ * GET  /api/payments/{studentId}
+ * POST /api/payments
  */
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class FeeController {
 
+    private final FeeService feeService;
+
+    /* ── Fees ── */
+
     @GetMapping("/fees")
-    public ResponseEntity<?> getFees() {
-        return ResponseEntity.ok(Map.of("message", "GET /fees — Phase 8"));
+    public ResponseEntity<List<Fee>> getFees() {
+        return ResponseEntity.ok(feeService.findAllFees());
+    }
+
+    @GetMapping("/fees/student/{studentId}")
+    public ResponseEntity<List<Fee>> getFeesByStudent(@PathVariable Long studentId) {
+        return ResponseEntity.ok(feeService.findFeesByStudentId(studentId));
     }
 
     @PostMapping("/fees")
-    public ResponseEntity<?> createFee(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "POST /fees — Phase 8"));
+    public ResponseEntity<Fee> createFee(@RequestBody Fee fee) {
+        return ResponseEntity.ok(feeService.createFee(fee));
     }
 
     @PutMapping("/fees/{id}")
-    public ResponseEntity<?> updateFee(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "PUT /fees/" + id + " — Phase 8"));
+    public ResponseEntity<Fee> updateFee(@PathVariable Long id, @RequestBody Fee fee) {
+        return ResponseEntity.ok(feeService.updateFee(id, fee));
     }
 
-    @PostMapping("/payments")
-    public ResponseEntity<?> createPayment(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(Map.of("message", "POST /payments — Phase 8"));
+    /* ── Payments ── */
+
+    @GetMapping("/payments")
+    public ResponseEntity<List<Payment>> getAllPayments() {
+        return ResponseEntity.ok(feeService.findAllPayments());
     }
 
     @GetMapping("/payments/{studentId}")
-    public ResponseEntity<?> getPayments(@PathVariable Long studentId) {
-        return ResponseEntity.ok(Map.of("message", "GET /payments/" + studentId + " — Phase 8"));
+    public ResponseEntity<List<Payment>> getPaymentsByStudent(@PathVariable Long studentId) {
+        return ResponseEntity.ok(feeService.findPaymentsByStudentId(studentId));
+    }
+
+    @PostMapping("/payments")
+    public ResponseEntity<Payment> createPayment(@RequestBody Payment payment) {
+        return ResponseEntity.ok(feeService.createPayment(payment));
     }
 }
